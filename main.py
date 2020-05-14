@@ -21,6 +21,7 @@ f1.exportToFile()
 # f2 = TseitinFormula(formulas[1])
 # f2.toCNF()
 
+print("\n==============================\n")
 f3 = TseitinFormula(formulas[2])
 f3.toCNF()
 print(f3.toString())

@@ -23,7 +23,7 @@ class TseitinFormula:
     terms = []
     
     # ! FIXME: temporary solution
-    operator_decoding = {6: "or", 7: "and"}
+    operator_decoding = {6: "and", 7: "or"}
 
     def __init__ (self, formula):
         tree = BooleanParser(formula)
@@ -67,7 +67,7 @@ class TseitinFormula:
                 clause.append(node.right.value)
 
             clause.append(node.negate)
-        
+
         self.clauses.append(clause)
 
         if prev_node == self.root:
@@ -102,18 +102,22 @@ class TseitinFormula:
         clauses = []
         terms = []
 
-        # TODO: 
-
         for clause, definition in self.clause_map.items():
-            term_list = [clause, definition['first_term'], definition['second_term']]
+            term_list = [definition['first_term'], definition['second_term'], clause]
             terms.extend(term_list)
 
             operator = definition['operator']
-            if operator == 'and':
+            is_negated = definition['is_negated']
+            if operator == 'and' and not is_negated:
                 clauses.extend(tc.getTseitinAndClause(term_list))
-            elif operator == 'or':
+            elif operator == 'and' and is_negated:
+                clauses.extend(tc.getTseitinNandClause(term_list))
+            elif operator == 'or' and not is_negated:
                 clauses.extend(tc.getTseitinOrClause(term_list))
+            elif operator == 'or' and is_negated:
+                clauses.extend(tc.getTseitinNorClause(term_list))
 
+        # append the last variable as clouse
         clauses.append([clause])
         self.terms =list(dict.fromkeys(terms))
         self.clauses = clauses
@@ -137,11 +141,10 @@ class TseitinFormula:
         
         return tseitin_formula[:-5]
 
+    # export Tseitin CNF form to .cnf file
     def exportToFile(self):
         clause_num = len(self.clauses)
         term_num = len(self.terms)
-
-        print(clause_num, term_num)
 
         f= open("simple_cnf.cnf", "w+")
         f.write("c  simple_cnf.cnf\n")
