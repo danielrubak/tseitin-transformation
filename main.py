@@ -8,17 +8,17 @@ from tseitin_generator import *
 # print(p.toString())
 
 formulas = [
-    '(a || b) && c || !(d && e)',
+    # '(a || b) && c || !(d && e)',
     '(!(p && (q || !r)))',
-    '(a && b) || (a && !c)'
+    # '(a && b) || (a && !c)'
 ]
 
-for test_id, formula in enumerate(formulas, start = 1):
+for test_id, formula in enumerate(formulas, start = 0):
     print("\n=============== TEST %d ===============\n" % (test_id))
-    f = TseitinFormula(formulas[1])
+    f = TseitinFormula(formulas[test_id])
     f.toCNF()
     print(f.toString())
 
-    if test_id == 1:
+    if test_id == 0:
         f.exportToFile()
 print()

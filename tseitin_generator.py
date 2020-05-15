@@ -23,13 +23,14 @@ class TseitinFormula:
     terms = []
     
     # ! FIXME: temporary solution
-    operator_decoding = {6: "and", 7: "or"}
+    operator_decoding = {6: "and", 7: "or", 8: "not"}
 
     def __init__ (self, formula):
         tree = BooleanParser(formula)
         self.root = tree.root
         self.clauses = []
         self.last_clause_ids = []
+        self.clause_map = {}
 
     def toCNF (self):        
         self.toTseitinClauses(None, self.root)
@@ -47,13 +48,10 @@ class TseitinFormula:
         clause = []
         if node == self.root:
             clause = [
-                None,
-                node.tokenType,
-                None,
-                node.negate
+                None, node.tokenType, None, node.negate
             ]
 
-            if len(self.clauses) != 2:
+            if len(self.last_clause_ids) != 2:
                 if node.left.tokenType == 1:
                     clause[0] = node.left.value
                 else:
@@ -72,14 +70,21 @@ class TseitinFormula:
             if node.left.value == None:
                 clause.append(len(self.clauses)-1)
             else:
-                clause.append(node.left.value)
+                if node.left.negate:
+                    clause.append(self.getNegatedTermClause(node.left))
+                else:
+                    clause.append(node.left.value)
 
             clause.append(node.tokenType)
 
             if node.right.value == None:
                 clause.append(len(self.clauses)-1)
             else:
-                clause.append(node.right.value)
+                if node.right.negate:
+                    self.clauses.append(self.getNegatedTermClause(node.right))
+                    clause.append(len(self.clauses)-1)
+                else:
+                    clause.append(node.right.value)
 
             clause.append(node.negate)
 
@@ -87,8 +92,15 @@ class TseitinFormula:
 
         if prev_node == self.root:
             self.last_clause_ids.append(len(self.clauses)-1)
+        
 
-    def getTseitinClauses(self):
+    def getNegatedTermClause(self, node):
+        # TODO: second element should be not token type
+        return [
+            node.value, 8, None, False
+        ]
+
+    def getTseitinClauses(self):      
         i = 0
         for clause in self.clauses:
             logic_var = "phi" + str(i)
@@ -118,11 +130,16 @@ class TseitinFormula:
         terms = []
 
         for clause, definition in self.clause_map.items():
-            term_list = [definition['first_term'], definition['second_term'], clause]
+            print(clause, "->", definition)
+            is_negated = definition['is_negated']
+            operator = definition['operator']
+
+            if operator == 'not':
+                term_list = [definition['first_term'], clause]
+            else:
+                term_list = [definition['first_term'], definition['second_term'], clause]            
             terms.extend(term_list)
 
-            operator = definition['operator']
-            is_negated = definition['is_negated']
             if operator == 'and' and not is_negated:
                 clauses.extend(tc.getTseitinAndClause(term_list))
             elif operator == 'and' and is_negated:
@@ -131,8 +148,13 @@ class TseitinFormula:
                 clauses.extend(tc.getTseitinOrClause(term_list))
             elif operator == 'or' and is_negated:
                 clauses.extend(tc.getTseitinNorClause(term_list))
+            elif operator == 'not':
+                clauses.extend(tc.getTseitinNotClause(term_list))
 
-        # append the last variable as clouse
+        # append the last variable as clause
+        print("Clause", clause)
+        print("Definition", definition)
+
         clauses.append([clause])
         self.terms =list(dict.fromkeys(terms))
         self.clauses = clauses
