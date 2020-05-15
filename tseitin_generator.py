@@ -47,11 +47,26 @@ class TseitinFormula:
         clause = []
         if node == self.root:
             clause = [
-                self.last_clause_ids[0],
+                None,
                 node.tokenType,
-                self.last_clause_ids[1],
+                None,
                 node.negate
             ]
+
+            if len(self.clauses) != 2:
+                if node.left.tokenType == 1:
+                    clause[0] = node.left.value
+                else:
+                    clause[0] = self.last_clause_ids[0]
+
+                if node.right.tokenType == 1:
+                    clause[2] = node.right.value
+                else:
+                    clause[2] = self.last_clause_ids[0]
+
+            else:
+                clause[0] = self.last_clause_ids[0]
+                clause[2] = self.last_clause_ids[1]
 
         else:
             if node.left.value == None:

@@ -13,15 +13,12 @@ formulas = [
     '(a && b) || (a && !c)'
 ]
 
-f1 = TseitinFormula(formulas[0])
-f1.toCNF()
-print(f1.toString())
-f1.exportToFile()
+for test_id, formula in enumerate(formulas, start = 1):
+    print("\n=============== TEST %d ===============\n" % (test_id))
+    f = TseitinFormula(formulas[1])
+    f.toCNF()
+    print(f.toString())
 
-# f2 = TseitinFormula(formulas[1])
-# f2.toCNF()
-
-print("\n==============================\n")
-f3 = TseitinFormula(formulas[2])
-f3.toCNF()
-print(f3.toString())
+    if test_id == 1:
+        f.exportToFile()
+print()
