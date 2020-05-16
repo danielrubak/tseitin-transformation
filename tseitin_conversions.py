@@ -52,8 +52,48 @@ def getTseitinNotClause(term_list):
         [a, b]
     ]
 
+# conversion for 'xor' operator
+# c <-> a xor b => (!a or !b or !c) and (a or b or !c) and (a or !b or c) and (!a or b or c)
+
+def getTseitinXorClause(term_list):
+    a, b, c = term_list
+    
+    return [
+        [-1, a, -1, b, -1, c],
+        [a, b, -1, c],
+        [a, -1, b, c],
+        [-1, a, b, c]
+    ]
+
+# conversion for 'xnor' operator
+# c <-> a xnor b => (!a or !b or c) and (a or b or c) and (a or !b or !c) and (!a or b or !c)
+def getTseitinXnorClause(term_list):
+    a, b, c = term_list
+
+    return [
+        [-1, a, -1, b, c],
+        [a, b, c],
+        [a, -1, b, -1, c],
+        [-1, a, b, -1, c]
+    ]
+
 def getTseitinAndClauseStr(a, b, c):
     return f"(!{a} or !{b} or {c}) and ({a} or !{c}) and ({b} or !{c})"
 
+def getTseitinNandClauseStr(a, b, c):
+    return f"(!{a} or !{b} or !{c}) and ({a} or {c}) and ({b} or {c})"
+
 def getTseitinOrClauseStr(a, b, c):
     return f"({a} or {b} or !{c}) and (!{a} or {c}) and (!{b} or {c})"
+
+def getTseitinNorClauseStr(a, b, c):
+    return f"({a} or {b} or {c}) and (!{a} or !{c}) and (!{b} or !{c})"
+
+def getTseitinNotClauseStr(a, b):
+    return f"(!{a} or !{b}) and ({a} or {b})"
+
+def getTseitinXorClauseStr(a, b, c):
+    return f"(!{a} or !{b} or !{c}) and ({a} or {b} or !{c}) and ({a} or !{b} or {c}) and (!{a} or {b} or {c})"
+
+def getTseitinXnorClauseStr(a, b, c):
+    return f"(!{a} or !{b} or {c}) and ({a} or {b} or {c}) and ({a} or !{b} or !{c}) and (!{a} or {b} or !{c})"
