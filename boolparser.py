@@ -11,32 +11,42 @@ p.evaluate(variable_dict) # variable_dict is a dictionary providing values for v
 """
 
 # TODO: some of expression needs parenthesis on the beginning and the end, there is need to add additional validation
-# TODO: TokenType should not be class, rather a field in BooleanParser or sth like that because there is no possibility to get type names
-
-class TokenType:
-	VAL, VAR, EQ, NEQ, LP, RP, AND, OR, NOT = range(9)
-
 class TreeNode:
-	tokenType = None
-	value = None
-	left = None
-	right = None
-	negate = None
-	carryover = None
-
-	def __init__(self, tokenType):
-		self.tokenType = tokenType
+	def __init__(self, token_type):
+		self.left = None
+		self.right = None
+		self.value = None
+		self.tokenType = token_type
 		self.negate = False
 		self.carryover = []
 
 class Tokenizer:
-	expression = None
-	tokens = None
-	tokenTypes = None
-	i = 0
-	
 	def __init__(self, exp):
+		# loogic formula
 		self.expression = exp
+
+		# list of all found tokens in exp
+		self.tokens = []
+		self.tokenTypes = []
+		self.i = 0
+		
+		self.tokenMap = {
+			'VAL': 'VAL', 'val': 'VAL', 0: 'VAL', 1: 'VAL',
+			'VAR': 'VAR', 'var': 'VAR',
+			'EQ': 'EQ', 'eq': 'EQ', '==': 'EQ',
+			'NEQ': 'NEQ', 'neq': 'NEQ', '!=': 'NEQ',
+			'LP': 'LP', '(': 'LP', 'lp': 'LP',
+			'RP': 'RP', ')': 'RP', 'rp': 'RP',
+			'AND': 'AND', 'and': 'AND' , '&&': 'AND',
+			'OR': 'OR', 'or': 'OR', '||': 'OR',
+			'NOT': 'NOT', 'not': 'NOT', '~': 'NOT', '!': 'NOT'
+		}
+
+	def getToken(self, token):
+		return self.tokenMap[token]
+
+	def isOperator(self, token):
+		return token in self.tokenMap.keys() and self.getToken(token) in ['AND', 'OR', 'NOT']
 
 	def next(self):
 		self.i += 1
@@ -53,7 +63,7 @@ class Tokenizer:
 	
 	def nextTokenTypeIsOperator(self):
 		t = self.tokenTypes[self.i]
-		return t == TokenType.EQ or t == TokenType.NEQ
+		return t == 'EQ' or t == 'NEQ'
 
 	def tokenize(self):
 		import re
@@ -71,55 +81,38 @@ class Tokenizer:
 		# remove white characters
 		self.tokens = [t.strip() for t in self.tokens if t.strip() != '']
 
-		self.tokenTypes = []
 		for t in self.tokens:
-			if t == 'AND' or t == 'and' or t == '&&':
-				self.tokenTypes.append(TokenType.AND)
-			elif t == 'OR' or t == 'or' or t == '||':
-				self.tokenTypes.append(TokenType.OR)
-			elif t == 'NOT' or t == 'not' or t == '~' or t == '!':
-				self.tokenTypes.append(TokenType.NOT)
-			elif t == '(':
-				self.tokenTypes.append(TokenType.LP)
-			elif t == ')':
-				self.tokenTypes.append(TokenType.RP)
-			elif t == '==':
-				self.tokenTypes.append(TokenType.EQ)
-			elif t == '!=':
-				self.tokenTypes.append(TokenType.NEQ)
-			elif t == 'True' or t == 'False' or re.fullmatch('[0-1]',t):
-				self.tokenTypes.append(TokenType.VAL)
-			elif re.search('^[a-zA-Z_]+$', t):
-				self.tokenTypes.append(TokenType.VAR)
+			if not self.isOperator(t) and re.search('^[a-zA-Z_]+$', t):
+				self.tokenTypes.append(self.getToken('var'))
 			else:
-				self.tokenTypes.append(None)
-
+				self.tokenTypes.append(self.getToken(t))
 
 class BooleanParser:
-	tokenizer = None
-	root = None
-
 	def __init__(self, exp):
+		self.root = None
 		self.tokenizer = Tokenizer(exp)
 		self.tokenizer.tokenize()
 		self.parse()
 
 	def parse(self):
 		whole_expression_negated = False
-		if self.tokenizer.nextTokenType() == TokenType.NOT:
+
+		if self.tokenizer.nextTokenType() == self.tokenizer.getToken('not'):
 			whole_expression_negated = True
 			self.tokenizer.next()
 		self.root = self.parseExpression()
 		if whole_expression_negated:
 			self.root.negate = True
-			self.root.carryover.append[TokenType.NOT]
+			self.root.carryover.append[self.tokenizer.getToken('not')]
 
 	def parseExpression(self):
 		andTerm1 = self.parseAndTerm()
-		while self.tokenizer.hasNext() and self.tokenizer.nextTokenType() == TokenType.OR:
+
+		or_token_type = self.tokenizer.getToken('or')
+		while self.tokenizer.hasNext() and self.tokenizer.nextTokenType() == or_token_type:
 			self.tokenizer.next()
 			andTermX = self.parseAndTerm()
-			andTerm = TreeNode(TokenType.OR)
+			andTerm = TreeNode(or_token_type)
 			andTerm.left = andTerm1
 			andTerm.right = andTermX
 			andTerm1 = andTerm
@@ -127,10 +120,12 @@ class BooleanParser:
 
 	def parseAndTerm(self):
 		condition1 = self.parseCondition()
-		while self.tokenizer.hasNext() and self.tokenizer.nextTokenType() == TokenType.AND:
+
+		and_token_type = self.tokenizer.getToken('and')
+		while self.tokenizer.hasNext() and self.tokenizer.nextTokenType() == and_token_type:
 			self.tokenizer.next()
 			conditionX = self.parseCondition()
-			condition = TreeNode(TokenType.AND)
+			condition = TreeNode(and_token_type)
 			condition.left = condition1
 			condition.right = conditionX
 			condition1 = condition
@@ -138,19 +133,19 @@ class BooleanParser:
 
 	def parseCondition(self):
 		negation_queued = False
-		if self.tokenizer.hasNext() and self.tokenizer.nextTokenType() == TokenType.NOT:
+		if self.tokenizer.hasNext() and self.tokenizer.nextTokenType() == self.tokenizer.getToken('not'):
 			negation_queued = True
 			self.tokenizer.next()
-		if self.tokenizer.hasNext() and self.tokenizer.nextTokenType() == TokenType.LP:
+		if self.tokenizer.hasNext() and self.tokenizer.nextTokenType() == self.tokenizer.getToken('lp'):
 			self.tokenizer.next()
 			expression = self.parseExpression()
 			if negation_queued:
 				expression.negate = True
-				expression.carryover.append(TokenType.NOT)
+				expression.carryover.append(self.tokenizer.getToken('not'))
 				negation_queued = False
-			expression.carryover.append(TokenType.LP)
-			expression.carryover.append(TokenType.RP)
-			if self.tokenizer.hasNext() and self.tokenizer.nextTokenType() == TokenType.RP:
+			expression.carryover.append(self.tokenizer.getToken('lp'))
+			expression.carryover.append(self.tokenizer.getToken('rp'))
+			if self.tokenizer.hasNext() and self.tokenizer.nextTokenType() == self.tokenizer.getToken('rp'):
 				self.tokenizer.next()
 				return expression
 			else:
@@ -163,7 +158,7 @@ class BooleanParser:
 		if self.tokenizer.hasNext() and self.tokenizer.nextTokenTypeIsOperator():
 			condition = TreeNode(self.tokenizer.nextTokenType())
 			self.tokenizer.next()
-			if self.tokenizer.nextTokenType() == TokenType.NOT:
+			if self.tokenizer.nextTokenType() == self.tokenizer.getToken('not'):
 				negation_queued = True
 			terminal2 = self.parseTerminal()
 			if negation_queued:
@@ -172,7 +167,7 @@ class BooleanParser:
 			condition.left = terminal1
 			condition.right = terminal2
 			return condition
-		elif self.tokenizer.hasNext() and self.tokenizer.nextTokenType() in [TokenType.RP, TokenType.AND, TokenType.OR]:
+		elif self.tokenizer.hasNext() and self.tokenizer.nextTokenType() in [self.tokenizer.getToken('rp'), self.tokenizer.getToken('and'), self.tokenizer.getToken('or')]:
 			return terminal1
 		else:
 			raise Exception('Operator expected, but got ' + self.tokenizer.next())
@@ -180,11 +175,11 @@ class BooleanParser:
 	def parseTerminal(self):
 		if self.tokenizer.hasNext():
 			tokenType = self.tokenizer.nextTokenType()
-			if tokenType == TokenType.VAL:
+			if tokenType == self.tokenizer.getToken('val'):
 				n = TreeNode(tokenType)
 				n.value = bool(self.tokenizer.next())
 				return n
-			elif tokenType == TokenType.VAR:
+			elif tokenType == self.tokenizer.getToken('var'):
 				n = TreeNode(tokenType)
 				n.value = self.tokenizer.next()
 				return n
@@ -199,9 +194,9 @@ class BooleanParser:
 	
 	def evaluateRecursive(self, treeNode, variable_dict):
 		result = None
-		if treeNode.tokenType == TokenType.VAL:
+		if treeNode.tokenType == self.tokenizer.getToken('val'):
 			result = treeNode.value
-		elif treeNode.tokenType == TokenType.VAR:
+		elif treeNode.tokenType == self.tokenizer.getToken('var'):
 			result = variable_dict.get(treeNode.value)
 		
 		if result != None:
@@ -211,13 +206,13 @@ class BooleanParser:
 		
 		left = self.evaluateRecursive(treeNode.left, variable_dict)
 		right = self.evaluateRecursive(treeNode.right, variable_dict)
-		if treeNode.tokenType == TokenType.EQ:
+		if treeNode.tokenType == self.tokenizer.getToken('eq'):
 			result = left == right
-		elif treeNode.tokenType == TokenType.NEQ:
+		elif treeNode.tokenType == self.tokenizer.getToken('neq'):
 			result = left != right
-		elif treeNode.tokenType == TokenType.AND:
+		elif treeNode.tokenType == self.tokenizer.getToken('and'):
 			result = left and right
-		elif treeNode.tokenType == TokenType.OR:
+		elif treeNode.tokenType == self.tokenizer.getToken('or'):
 			result = left or right
 		else:
 			raise Exception('Unexpected type ' + str(treeNode.tokenType))
@@ -240,9 +235,9 @@ class BooleanParser:
 			left = self.toStringRecursive(treeNode.left)
 		else:
 			for token in treeNode.carryover:
-				if token == TokenType.LP:
+				if token == self.tokenizer.getToken('lp'):
 					left = left + '('
-				elif token == TokenType.NOT:
+				elif token == self.tokenizer.getToken('not'):
 					left = left + '!'
 
 
@@ -250,32 +245,32 @@ class BooleanParser:
 			right = self.toStringRecursive(treeNode.right)
 		else:
 			for token in treeNode.carryover:
-				if token == TokenType.RP:
+				if token == self.tokenizer.getToken('rp'):
 					right = ')' + right
 
-		if treeNode.tokenType == TokenType.VAL:
+		if treeNode.tokenType == self.tokenizer.getToken('val'):
 			if treeNode.negate:
 				current = not treeNode.value
 			else:
 				current = treeNode.value
-		if treeNode.tokenType == TokenType.VAR:
+		if treeNode.tokenType == self.tokenizer.getToken('var'):
 			current = treeNode.value
 			if treeNode.negate:
 				current = '!' + current
-		elif treeNode.tokenType == TokenType.EQ:
+		elif treeNode.tokenType == self.tokenizer.getToken('eq'):
 			current = '=='
-		elif treeNode.tokenType == TokenType.NEQ:
+		elif treeNode.tokenType == self.tokenizer.getToken('neq'):
 			current = '!='
-		elif treeNode.tokenType == TokenType.AND:
+		elif treeNode.tokenType == self.tokenizer.getToken('and'):
 			current = ' and '
-		elif treeNode.tokenType == TokenType.OR:
+		elif treeNode.tokenType == self.tokenizer.getToken('or'):
 			current = ' or '
 
 		return left + current + right
 
 	def carryOver(self, treeNode):
 		for token in treeNode.carryover:
-			if token == TokenType.RP:
+			if token == self.tokenizer.getToken('rp'):
 				if treeNode.right != None:
 					treeNode.right.carryover.append(token)
 			else:
@@ -285,17 +280,9 @@ class BooleanParser:
 
 	#diagnostic
 	def printTree(self, treeNode):
-		tokenMap = { 0: "VAL", 1: "VAR", 2: "EQ", 3: "NEQ", 4: "LP", 
-					5: "RP", 6: "AND", 7: "OR", 8: "NOT"}
-
-		print(tokenMap[treeNode.tokenType], ": ", 
-		[tokenMap[co] for co in treeNode.carryover])
+		print(treeNode.tokenType, ": ", treeNode.carryover)
 		
-		print("check left")
 		if treeNode.left != None:
-			print("left exists")
 			self.printTree(treeNode.left)
-		print("check right")
 		if treeNode.right != None:
-			print("right exists")
 			self.printTree(treeNode.right)

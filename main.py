@@ -1,18 +1,12 @@
-from boolparser import BooleanParser, TokenType
+from boolparser import BooleanParser
 from tseitin_generator import TseitinFormula
-
-# var_dict={"a":True, "b":False, "c":False, "d":True, "e":True}
-# p = BooleanParser('(a || b) && c || !(d && e)')
-# p.printTree(p.root)
-# print(p.evaluate(var_dict))
-# print(p.toString())
 
 formulas = [
     '(a || b) && c || !(d && e)',
     '(!(p && (q || !r)))',
     '(a && b) || (a && !c)',
     '(a && b) or ((c || d) and e)'
-]
+]    
 
 for test_id, formula in enumerate(formulas, start = 0):
     print("\n=============== TEST %d ===============\n" % (test_id))

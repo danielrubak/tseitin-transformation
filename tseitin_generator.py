@@ -1,4 +1,4 @@
-from boolparser import BooleanParser, TokenType
+from boolparser import BooleanParser
 import tseitin_conversions as tc
 
 class TseitinFormula:
@@ -21,13 +21,10 @@ class TseitinFormula:
 
     # list of all terms in expression
     terms = []
-    
-    # ! FIXME: temporary solution
-    operator_decoding = {6: "and", 7: "or", 8: "not"}
 
     def __init__ (self, formula):
-        tree = BooleanParser(formula)
-        self.root = tree.root
+        self.tree = BooleanParser(formula)
+        self.root = self.tree.root
         self.clauses = []
         self.last_clause_ids = []
         self.clause_map = {}
@@ -38,10 +35,11 @@ class TseitinFormula:
         self.setTseitinFormula()
 
     def toTseitinClauses(self, prev_node, node):
-        if node.left != None and node.left.tokenType != TokenType.VAR:
+        var_token = self.tree.tokenizer.getToken('var')
+        if node.left != None and node.left.tokenType != var_token:
             self.toTseitinClauses(node, node.left)
         
-        if node.right != None and node.right.tokenType != TokenType.VAR:
+        if node.right != None and node.right.tokenType != var_token:
             self.toTseitinClauses(node, node.right)
 
         # build clause
@@ -51,16 +49,18 @@ class TseitinFormula:
                 None, node.tokenType, None, node.negate
             ]
 
+            not_token = self.tree.tokenizer.getToken('not')
+
             # if left/right child of root is a term then last_clause_ids may be incomplete
             if len(self.last_clause_ids) != 2:
-                if node.left.tokenType == 1:
+                if node.left.tokenType == not_token:
                     # left child is a term
                     clause[0] = node.left.value
                 else:
                     # left child is a operator
                     clause[0] = self.last_clause_ids[0]
 
-                if node.right.tokenType == 1:
+                if node.right.tokenType == not_token:
                     # right child is a term
                     clause[2] = node.right.value
                 else:
@@ -101,9 +101,9 @@ class TseitinFormula:
         
 
     def getNegatedTermClause(self, node):
-        # TODO: second element should be 'not' token type
+        token = self.tree.tokenizer.getToken('not')
         return [
-            node.value, 8, None, False
+            node.value, token, None, False
         ]
 
     def getTseitinClauses(self):      
@@ -122,19 +122,11 @@ class TseitinFormula:
             else:
                 second_term = clause[2]
 
-            # ! FIXME: this should be get from some kind of map or sth
-            # TODO: move to separate method
             operator, is_negated = clause[1], clause[3]
-            if operator == 6 and is_negated:
-                operator = "nand"
-            elif operator == 6:
-                operator = "and"
-            elif operator == 7 and is_negated:
-                operator = 'nor'
-            elif operator == 7:
-                operator = 'or'
-            elif operator == 8:
-                operator = 'not'
+            if operator == 'AND' and is_negated:
+                operator = "NAND"
+            elif operator == 'OR' and is_negated:
+                operator = 'NOR'
          
             self.clause_map[logic_var] = {
                 "first_term": first_term,
@@ -151,21 +143,21 @@ class TseitinFormula:
         for clause, definition in self.clause_map.items():
             operator = definition['operator']
 
-            if operator == 'not':
+            if operator == 'NOT':
                 term_list = [definition['first_term'], clause]
             else:
                 term_list = [definition['first_term'], definition['second_term'], clause]            
             terms.extend(term_list)
 
-            if operator == 'and':
+            if operator == 'AND':
                 clauses.extend(tc.getTseitinAndClause(term_list))
-            elif operator == 'nand':
+            elif operator == 'NAND':
                 clauses.extend(tc.getTseitinNandClause(term_list))
-            elif operator == 'or':
+            elif operator == 'OR':
                 clauses.extend(tc.getTseitinOrClause(term_list))
-            elif operator == 'or':
+            elif operator == 'NOR':
                 clauses.extend(tc.getTseitinNorClause(term_list))
-            elif operator == 'not':
+            elif operator == 'NOT':
                 clauses.extend(tc.getTseitinNotClause(term_list))
 
         # append the last variable as clause
