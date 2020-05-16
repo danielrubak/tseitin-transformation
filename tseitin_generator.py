@@ -9,7 +9,6 @@ class TseitinFormula:
     # id = 0: first term or index of another clause
     # id = 1: operator id
     # id = 2: second term or index of another clause
-    # id = 3: is negated
     clauses = []
 
     # formatted dict of all clauses
@@ -20,6 +19,7 @@ class TseitinFormula:
     # ids of last clause for left and right tree, it is necessary to get the last clause
     last_clause_ids = []
 
+    # list of all terms in expression
     terms = []
     
     # ! FIXME: temporary solution
@@ -51,17 +51,23 @@ class TseitinFormula:
                 None, node.tokenType, None, node.negate
             ]
 
+            # if left/right child of root is a term then last_clause_ids may be incomplete
             if len(self.last_clause_ids) != 2:
                 if node.left.tokenType == 1:
+                    # left child is a term
                     clause[0] = node.left.value
                 else:
+                    # left child is a operator
                     clause[0] = self.last_clause_ids[0]
 
                 if node.right.tokenType == 1:
+                    # right child is a term
                     clause[2] = node.right.value
                 else:
+                    # right child is a operator
                     clause[2] = self.last_clause_ids[0]
 
+            # both leaves of root node are operators
             else:
                 clause[0] = self.last_clause_ids[0]
                 clause[2] = self.last_clause_ids[1]
@@ -95,7 +101,7 @@ class TseitinFormula:
         
 
     def getNegatedTermClause(self, node):
-        # TODO: second element should be not token type
+        # TODO: second element should be 'not' token type
         return [
             node.value, 8, None, False
         ]
@@ -115,12 +121,25 @@ class TseitinFormula:
                 second_term = "phi" + str(clause[2])
             else:
                 second_term = clause[2]
+
+            # ! FIXME: this should be get from some kind of map or sth
+            # TODO: move to separate method
+            operator, is_negated = clause[1], clause[3]
+            if operator == 6 and is_negated:
+                operator = "nand"
+            elif operator == 6:
+                operator = "and"
+            elif operator == 7 and is_negated:
+                operator = 'nor'
+            elif operator == 7:
+                operator = 'or'
+            elif operator == 8:
+                operator = 'not'
          
             self.clause_map[logic_var] = {
                 "first_term": first_term,
                 "second_term": second_term,
-                "operator": self.operator_decoding[clause[1]] ,
-                "is_negated": clause[3]
+                "operator": operator
             }
 
             i += 1
@@ -130,8 +149,6 @@ class TseitinFormula:
         terms = []
 
         for clause, definition in self.clause_map.items():
-            print(clause, "->", definition)
-            is_negated = definition['is_negated']
             operator = definition['operator']
 
             if operator == 'not':
@@ -140,22 +157,20 @@ class TseitinFormula:
                 term_list = [definition['first_term'], definition['second_term'], clause]            
             terms.extend(term_list)
 
-            if operator == 'and' and not is_negated:
+            if operator == 'and':
                 clauses.extend(tc.getTseitinAndClause(term_list))
-            elif operator == 'and' and is_negated:
+            elif operator == 'nand':
                 clauses.extend(tc.getTseitinNandClause(term_list))
-            elif operator == 'or' and not is_negated:
+            elif operator == 'or':
                 clauses.extend(tc.getTseitinOrClause(term_list))
-            elif operator == 'or' and is_negated:
+            elif operator == 'or':
                 clauses.extend(tc.getTseitinNorClause(term_list))
             elif operator == 'not':
                 clauses.extend(tc.getTseitinNotClause(term_list))
 
         # append the last variable as clause
-        print("Clause", clause)
-        print("Definition", definition)
-
         clauses.append([clause])
+        
         self.terms =list(dict.fromkeys(terms))
         self.clauses = clauses
 

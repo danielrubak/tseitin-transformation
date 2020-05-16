@@ -1,5 +1,5 @@
 from boolparser import BooleanParser, TokenType
-from tseitin_generator import *
+from tseitin_generator import TseitinFormula
 
 # var_dict={"a":True, "b":False, "c":False, "d":True, "e":True}
 # p = BooleanParser('(a || b) && c || !(d && e)')
@@ -8,9 +8,10 @@ from tseitin_generator import *
 # print(p.toString())
 
 formulas = [
-    # '(a || b) && c || !(d && e)',
+    '(a || b) && c || !(d && e)',
     '(!(p && (q || !r)))',
-    # '(a && b) || (a && !c)'
+    '(a && b) || (a && !c)',
+    '(a && b) or ((c || d) and e)'
 ]
 
 for test_id, formula in enumerate(formulas, start = 0):
