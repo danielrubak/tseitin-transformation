@@ -1,4 +1,4 @@
-from Tokenizer import *
+from Tokenizer import Tokenizer
 
 """
 Grammar:
