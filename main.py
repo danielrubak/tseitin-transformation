@@ -6,7 +6,7 @@ formulas = [
     '(!(p && (q || !r)))',
     '(a && b) || (a && !c)',
     '(a && b) or ((c || d) and e)'
-]    
+]
 
 for test_id, formula in enumerate(formulas, start = 0):
     print("\n=============== TEST %d ===============\n" % (test_id))
