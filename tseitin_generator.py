@@ -1,5 +1,7 @@
 from boolparser import BooleanParser
 import tseitin_conversions as tc
+from SATSolver import SATSolver
+
 
 class TseitinFormula:
     root = None
@@ -22,14 +24,17 @@ class TseitinFormula:
     # list of all terms in expression
     terms = []
 
-    def __init__ (self, formula):
+    def __init__(self, formula):
         self.tree = BooleanParser(formula)
         self.root = self.tree.root
         self.clauses = []
         self.last_clause_ids = []
         self.clause_map = {}
+        self.resulkt = {}
+        self.is_valid = True
+        self.term_assignment = {}
 
-    def toCNF (self):        
+    def toCNF(self):
         self.toTseitinClauses(None, self.root)
         self.getTseitinClauses()
         self.setTseitinFormula()
@@ -38,7 +43,7 @@ class TseitinFormula:
         var_token = self.tree.tokenizer.getToken('var')
         if node.left != None and node.left.tokenType != var_token:
             self.toTseitinClauses(node, node.left)
-        
+
         if node.right != None and node.right.tokenType != var_token:
             self.toTseitinClauses(node, node.right)
 
@@ -98,7 +103,6 @@ class TseitinFormula:
 
         if prev_node == self.root:
             self.last_clause_ids.append(len(self.clauses)-1)
-        
 
     def getNegatedTermClause(self, node):
         token = self.tree.tokenizer.getToken('not')
@@ -106,7 +110,7 @@ class TseitinFormula:
             node.value, token, None, False
         ]
 
-    def getTseitinClauses(self):      
+    def getTseitinClauses(self):
         i = 0
         for clause in self.clauses:
             logic_var = "phi" + str(i)
@@ -127,7 +131,7 @@ class TseitinFormula:
                 operator = "NAND"
             elif operator == 'OR' and is_negated:
                 operator = 'NOR'
-         
+
             self.clause_map[logic_var] = {
                 "first_term": first_term,
                 "second_term": second_term,
@@ -135,7 +139,7 @@ class TseitinFormula:
             }
 
             i += 1
-    
+
     def setTseitinFormula(self):
         clauses = []
         terms = []
@@ -146,7 +150,8 @@ class TseitinFormula:
             if operator == 'NOT':
                 term_list = [definition['first_term'], clause]
             else:
-                term_list = [definition['first_term'], definition['second_term'], clause]            
+                term_list = [definition['first_term'],
+                             definition['second_term'], clause]
             terms.extend(term_list)
 
             if operator == 'AND':
@@ -162,8 +167,8 @@ class TseitinFormula:
 
         # append the last variable as clause
         clauses.append([clause])
-        
-        self.terms =list(dict.fromkeys(terms))
+
+        self.terms = list(dict.fromkeys(terms))
         self.clauses = clauses
 
     def toString(self):
@@ -182,7 +187,7 @@ class TseitinFormula:
             term_str = term_str + ")"
 
             tseitin_formula = tseitin_formula + term_str + " and "
-        
+
         return tseitin_formula[:-5]
 
     # export Tseitin CNF form to .cnf file
@@ -190,7 +195,7 @@ class TseitinFormula:
         clause_num = len(self.clauses)
         term_num = len(self.terms)
 
-        f= open("simple_cnf.cnf", "w+")
+        f = open("simple_cnf.cnf", "w+")
         f.write("c  simple_cnf.cnf\n")
         f.write("c\n")
         f.write("p cnf %d %d\n" % (term_num, clause_num))
@@ -201,16 +206,28 @@ class TseitinFormula:
                 if term == -1:
                     continue
 
-                term_id = self.terms.index(term)
+                term_id = self.terms.index(term) + 1
                 if idx > 0 and clause[idx-1] == -1:
                     term_id *= -1
-                
+
                 formatted_clause_list.append(term_id)
-            
+
             formatted_clause_list.append(0)
             clause_str = ' '.join(map(str, formatted_clause_list))
             clause_str += '\n'
 
             f.write(clause_str)
-        
+
         f.close()
+
+    def solve(self):
+        result = SATSolver('glucose3', self.terms, self.clauses).solve()
+
+        self.is_valid = result['is_valid']
+        self.term_assignment = result['term_assignment']
+
+    def getTermAssignment(self):
+        return self.term_assignment
+
+    def isValid(self):
+        return self.is_valid

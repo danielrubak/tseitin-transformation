@@ -1,0 +1,7 @@
+{
+    "python.pythonPath": "venv/bin/python3",
+    "code-runner.executorMap": {
+        "python": "source $workspaceRoot/venv/bin/activate && python3 $fullFileName",
+    },
+    "code-runner.runInTerminal": true
+}

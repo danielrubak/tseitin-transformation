@@ -3,12 +3,12 @@ from tseitin_generator import TseitinFormula
 
 formulas = [
     '(a || b) && c || !(d && e)',
-    '(!(p && (q || !r)))',
-    '(a && b) || (a && !c)',
-    '(a && b) or ((c || d) and e)'
+    # '(!(p && (q || !r)))',
+    # '(a && b) || (a && !c)',
+    # '(a && b) or ((c || d) and e)'
 ]
 
-for test_id, formula in enumerate(formulas, start = 0):
+for test_id, formula in enumerate(formulas, start=0):
     print("\n=============== TEST %d ===============\n" % (test_id))
     f = TseitinFormula(formulas[test_id])
     f.toCNF()
@@ -16,4 +16,6 @@ for test_id, formula in enumerate(formulas, start = 0):
 
     if test_id == 0:
         f.exportToFile()
-print()
+
+    f.solve()
+    print(f.getTermAssignment())
