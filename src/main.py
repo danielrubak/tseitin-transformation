@@ -1,5 +1,5 @@
-from boolparser import BooleanParser
-from tseitin_generator import TseitinFormula
+from parser.boolparser import BooleanParser
+from parser.tseitin_generator import TseitinFormula
 
 formulas = [
     '(a || b) && c || !(d && e)',
@@ -15,7 +15,7 @@ for test_id, formula in enumerate(formulas, start=0):
     print(f.toString())
 
     if test_id == 0:
-        f.exportToFile()
+        f.exportToFile("simple_cnf")
 
     f.solve()
     print(f.getTermAssignment())

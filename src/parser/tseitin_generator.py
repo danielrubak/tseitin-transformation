@@ -1,6 +1,7 @@
-from boolparser import BooleanParser
-import tseitin_conversions as tc
-from SATSolver import SATSolver
+from parser.boolparser import BooleanParser
+from solver.SATSolver import SATSolver
+from utils import tseitin_conversions as tc
+import os
 
 
 class TseitinFormula:
@@ -191,12 +192,18 @@ class TseitinFormula:
         return tseitin_formula[:-5]
 
     # export Tseitin CNF form to .cnf file
-    def exportToFile(self):
+    def exportToFile(self, file_name):
         clause_num = len(self.clauses)
         term_num = len(self.terms)
 
-        f = open("simple_cnf.cnf", "w+")
-        f.write("c  simple_cnf.cnf\n")
+        script_path = os.path.dirname(__file__)
+        path_list = script_path.split(os.sep)
+        script_directory = path_list[0:len(path_list)-1]
+        rel_path = "data/" + file_name + ".cnf"
+        path = "/".join(script_directory) + "/" + rel_path
+        f = open(path, "w+")
+
+        f.write("c  " + file_name + ".cnf\n")
         f.write("c\n")
         f.write("p cnf %d %d\n" % (term_num, clause_num))
 
