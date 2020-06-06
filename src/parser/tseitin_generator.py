@@ -29,9 +29,10 @@ class TseitinFormula:
         self.tree = BooleanParser(formula)
         self.root = self.tree.root
         self.clauses = []
+        self.original_terms = []
+        self.terms = []
         self.last_clause_ids = []
         self.clause_map = {}
-        self.resulkt = {}
         self.is_valid = True
         self.term_assignment = {}
 
@@ -121,11 +122,13 @@ class TseitinFormula:
                 first_term = "phi" + str(clause[0])
             else:
                 first_term = clause[0]
+                self.original_terms.append(first_term)
 
             if isinstance(clause[2], int):
                 second_term = "phi" + str(clause[2])
             else:
                 second_term = clause[2]
+                self.original_terms.append(second_term)
 
             operator, is_negated = clause[1], clause[3]
             if operator == 'AND' and is_negated:
@@ -227,14 +230,22 @@ class TseitinFormula:
 
         f.close()
 
-    def solve(self):
-        result = SATSolver('glucose3', self.terms, self.clauses).solve()
+    def solve(self, solver_name):
+        result = SATSolver(solver_name, self.terms, self.clauses).solve()
 
         self.is_valid = result['is_valid']
         self.term_assignment = result['term_assignment']
 
-    def getTermAssignment(self):
-        return self.term_assignment
+    def getTermAssignment(self, only_original=False):
+        if only_original:
+            original_term_assignment = {}
+            for term, term_value in self.term_assignment.items():
+                if term in self.original_terms:
+                    original_term_assignment[term] = term_value
+
+            return original_term_assignment
+        else:
+            return self.term_assignment
 
     def isValid(self):
         return self.is_valid

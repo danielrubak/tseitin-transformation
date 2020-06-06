@@ -17,5 +17,6 @@ for test_id, formula in enumerate(formulas, start=0):
     if test_id == 0:
         f.exportToFile("simple_cnf")
 
-    f.solve()
+    f.solve('glucose3')
     print(f.getTermAssignment())
+    print(f.getTermAssignment(True))
