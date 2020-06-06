@@ -5,36 +5,32 @@ import os
 
 
 class TseitinFormula:
-    root = None
-
-    # list of all clauses based on tree
-    # every clause is a list, where:
-    # id = 0: first term or index of another clause
-    # id = 1: operator id
-    # id = 2: second term or index of another clause
-    clauses = []
-
-    # formatted dict of all clauses
-    # keys: clause name, for example phi0
-    # values: dict with keys 'first_term', 'second_term', 'operator', 'is_negated'
-    clause_map = {}
-
-    # ids of last clause for left and right tree, it is necessary to get the last clause
-    last_clause_ids = []
-
-    # list of all terms in expression
-    terms = []
-
-    def __init__(self, formula):
+    def __init__(self, formula, convert_to_cnf=False, export_to_file=False):
         self.tree = BooleanParser(formula)
         self.root = self.tree.root
+
+        # list of all clauses based on tree
+        # every clause is a list, where:
+        # id = 0: first term or index of another clause
+        # id = 1: operator id
+        # id = 2: second term or index of another clause
         self.clauses = []
         self.original_terms = []
+        # list of all terms in expression
         self.terms = []
+
+        # ids of last clause for left and right tree, it is necessary to get the last clause
         self.last_clause_ids = []
+
+        # formatted dict of all clauses
+        # keys: clause name, for example phi0
+        # values: dict with keys 'first_term', 'second_term', 'operator', 'is_negated'
         self.clause_map = {}
         self.is_valid = True
-        self.term_assignment = {}
+        self.terms_assignment = {}
+
+        if convert_to_cnf:
+            self.toCNF()
 
     def toCNF(self):
         self.toTseitinClauses(None, self.root)
@@ -234,18 +230,18 @@ class TseitinFormula:
         result = SATSolver(solver_name, self.terms, self.clauses).solve()
 
         self.is_valid = result['is_valid']
-        self.term_assignment = result['term_assignment']
+        self.terms_assignment = result['terms_assignment']
 
     def getTermAssignment(self, only_original=False):
         if only_original:
-            original_term_assignment = {}
-            for term, term_value in self.term_assignment.items():
+            original_terms_assignment = {}
+            for term, term_value in self.terms_assignment.items():
                 if term in self.original_terms:
-                    original_term_assignment[term] = term_value
+                    original_terms_assignment[term] = term_value
 
-            return original_term_assignment
+            return original_terms_assignment
         else:
-            return self.term_assignment
+            return self.terms_assignment
 
     def isValid(self):
         return self.is_valid

@@ -33,9 +33,9 @@ class SATSolver:
         result['is_valid'] = is_valid
 
         term_values = self.solver.get_model()
-        term_assignment = {}
+        terms_assignment = {}
         for (term, value) in zip(self.terms, term_values):
-            term_assignment[term] = value
-        result['term_assignment'] = term_assignment
+            terms_assignment[term] = 1 if value > 0 else 0
+        result['terms_assignment'] = terms_assignment
 
         return result
