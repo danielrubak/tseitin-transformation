@@ -39,6 +39,7 @@ class TseitinFormula:
 
     def toTseitinClauses(self, prev_node, node):
         var_token = self.tree.tokenizer.getToken('var')
+
         if node.left != None and node.left.tokenType != var_token:
             self.toTseitinClauses(node, node.left)
 
@@ -56,22 +57,25 @@ class TseitinFormula:
 
             # if left/right child of root is a term then last_clause_ids may be incomplete
             if len(self.last_clause_ids) != 2:
-                if node.left.tokenType == not_token:
+                # print("IDS: ", self.last_clause_ids,
+                #       node.left.tokenType, node.left.value, node.right.tokenType, node.right.value)
+
+                if node.left.tokenType == not_token or node.left.tokenType == self.tree.tokenizer.getToken('var'):
                     # left child is a term
                     clause[0] = node.left.value
                 else:
-                    # left child is a operator
+                    # left child is an operator
                     clause[0] = self.last_clause_ids[0]
 
-                if node.right.tokenType == not_token:
+                if node.right.tokenType == not_token or node.right.tokenType == self.tree.tokenizer.getToken('var'):
                     # right child is a term
                     clause[2] = node.right.value
                 else:
                     # right child is a operator
                     clause[2] = self.last_clause_ids[0]
 
-            # both leaves of root node are operators
             else:
+                # both leaves of root node are operators
                 clause[0] = self.last_clause_ids[0]
                 clause[2] = self.last_clause_ids[1]
 
@@ -226,22 +230,21 @@ class TseitinFormula:
 
         f.close()
 
-    def solve(self, solver_name):
-        result = SATSolver(solver_name, self.terms, self.clauses).solve()
+    def solve(self, return_all_assignments=True):
+        self.terms_assignment = SATSolver(
+            self.terms, self.clauses).solve(return_all_assignments)
 
-        self.is_valid = result['is_valid']
-        self.terms_assignment = result['terms_assignment']
+    def getTermAssignment(self, only_original=True):
+        terms_assignment = []
 
-    def getTermAssignment(self, only_original=False):
-        if only_original:
-            original_terms_assignment = {}
-            for term, term_value in self.terms_assignment.items():
-                if term in self.original_terms:
-                    original_terms_assignment[term] = term_value
+        for assignment in self.terms_assignment:
+            part_assignment = {}
 
-            return original_terms_assignment
-        else:
-            return self.terms_assignment
+            for term, term_value in assignment.items():
+                if only_original and term in self.original_terms:
+                    part_assignment[term] = term_value
+                elif only_original is False:
+                    part_assignment[term] = term_value
+            terms_assignment.append(part_assignment)
 
-    def isValid(self):
-        return self.is_valid
+        return terms_assignment

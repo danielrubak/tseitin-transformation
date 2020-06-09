@@ -222,6 +222,8 @@ class BooleanParser:
         print(treeNode.tokenType, ": ", treeNode.carryover)
 
         if treeNode.left != None:
+            print("GO LEFT")
             self.printTree(treeNode.left)
         if treeNode.right != None:
+            print("GO RIGHT")
             self.printTree(treeNode.right)
