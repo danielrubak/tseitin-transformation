@@ -10,10 +10,10 @@ class Tokenizer:
 		self.i = 0
 		
 		self.tokenMap = {
-			'VAL': 'VAL', 'val': 'VAL', 0: 'VAL', 1: 'VAL',
+			'VAL': 'VAL', 'val': 'VAL', False: 'VAL', True: 'VAL',
 			'VAR': 'VAR', 'var': 'VAR',
 			'EQ': 'EQ', 'eq': 'EQ', '==': 'EQ',
-			'NEQ': 'NEQ', 'neq': 'NEQ', '!=': 'NEQ',
+			'NEQ': 'NEQ', 'neq': 'NEQ', '!=': 'NEQ', '~=': 'NEQ',
 			'LP': 'LP', '(': 'LP', 'lp': 'LP',
 			'RP': 'RP', ')': 'RP', 'rp': 'RP',
 			'AND': 'AND', 'and': 'AND' , '&&': 'AND',
@@ -46,7 +46,7 @@ class Tokenizer:
 
 	def tokenize(self):
 		import re
-		reg = re.compile(r'(\bTrue\b|\bFalse\b|\bAND\b|\band\b|&&|\bOR\b|\bor\b|\|\||\bNOT\b|\bnot\b|~|!|!=|==|\(|\))')
+		reg = re.compile(r'(\btrue\b|\bfalse\b|\bTrue\b|\bFalse\b|\bAND\b|\band\b|&&|\bOR\b|\bor\b|\|\||\bNOT\b|\bnot\b|~|!|~=|!=|==|\(|\))')
 		
 		# every symbol in the input expression should be separate element on list
 		self.tokens = reg.split(self.expression)
@@ -56,12 +56,19 @@ class Tokenizer:
 			if self.tokens[idx] == '!' and re.match('=.*', self.tokens[idx+1]):
 				self.tokens[idx] = '!='
 				self.tokens[idx+1] = self.tokens[idx+1][1:]
+			elif self.tokens[idx] == '~' and re.match('=.*', self.tokens[idx+1]):
+				self.tokens[idx] = '~='
+				self.tokens[idx+1] = self.tokens[idx+1][1:]
 
 		# remove white characters
 		self.tokens = [t.strip() for t in self.tokens if t.strip() != '']
 
 		for t in self.tokens:
-			if not self.isOperator(t) and re.search('^[a-zA-Z_]+$', t):
+			if t == 'False' or t == 'false' or t == '0':
+				t = False
+			elif t == 'True' or t == 'true' or t == '1':
+				t = True
+			if not self.isOperator(t) and not (t == True or t == False) and re.search('^[a-zA-Z_]+$', t):
 				self.tokenTypes.append(self.getToken('var'))
 			else:
 				self.tokenTypes.append(self.getToken(t))
