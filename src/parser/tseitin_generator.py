@@ -5,7 +5,7 @@ import os
 
 
 class TseitinFormula:
-    def __init__(self, formula, convert_to_cnf=False, export_to_file=False):
+    def __init__(self, formula, convert_to_cnf=True, export_to_file=False):
         self.tree = BooleanParser(formula)
         self.root = self.tree.root
 
