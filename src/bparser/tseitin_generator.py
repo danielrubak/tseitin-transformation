@@ -364,12 +364,17 @@ class TseitinFormula:
         return formula
 
     def getSolverReport(self):
+        original_terms = list(set(self.original_terms))
+        original_terms = [x for x in original_terms if x != None]
+
         report_str = "Original formula:\n" + self.original_formula + \
             "\n\nTseitin formula:\n" + self.tseitin_formula + \
+            "\n\nOriginal number of terms:\n" + str(len(original_terms)) + \
+            "\n\nTseitin number of terms:\n" + str(len(self.terms)) + \
             "\n\nExecution time:\n" + self.execution_time_str + \
             "\n\nTerms assignment:\n"
 
         for terms_assignment in self.getTermAssignment():
-            report_str = report_str + str(terms_assignment) + "\n"
+            report_str += str(terms_assignment) + "\n"
 
         return report_str
