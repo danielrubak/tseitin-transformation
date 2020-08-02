@@ -86,7 +86,7 @@ class BooleanParser:
                 return expression
             else:
                 raise Exception("Closing ) expected, but got " +
-                                self.tokenizer.next())
+                                self.tokenizer.peek())
 
         terminal1 = self.parseTerminal()
         if negation_queued:
@@ -104,7 +104,7 @@ class BooleanParser:
             condition.left = terminal1
             condition.right = terminal2
             return condition
-        elif self.tokenizer.hasNext() and self.tokenizer.nextTokenType() in [self.tokenizer.getToken('rp'), self.tokenizer.getToken('and'), self.tokenizer.getToken('or')]:
+        elif not self.tokenizer.hasNext() or self.tokenizer.nextTokenType() in [self.tokenizer.getToken('rp'), self.tokenizer.getToken('and'), self.tokenizer.getToken('or')]:
             return terminal1
         else:
             raise Exception('Operator expected, but got ' +

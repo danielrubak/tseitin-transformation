@@ -32,7 +32,10 @@ class Tokenizer:
         return self.tokens[self.i-1]
 
     def peek(self):
-        return self.tokens[self.i]
+        if self.hasNext():
+            return self.tokens[self.i]
+        else:
+            return "formula end"
 
     def hasNext(self):
         return self.i < len(self.tokens)
@@ -69,7 +72,7 @@ class Tokenizer:
                 t = False
             elif t == 'True' or t == 'true' or t == '1':
                 t = True
-            if not self.isOperator(t) and not (t == True or t == False) and re.search('^[a-zA-Z_]+$', t):
+            if not self.isOperator(t) and not (t == True or t == False) and re.search('^[a-zA-Z_]+[0-9]*$', t):
                 self.tokenTypes.append(self.getToken('var'))
             else:
                 self.tokenTypes.append(self.getToken(t))
