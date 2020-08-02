@@ -22,10 +22,10 @@ class SATSolver:
 
             self.clauses.append(part_clause_list)
 
-    def solve(self, return_all_assignments=True):
+    def solve(self, solver_name='m22', return_all_assignments=True):
         result = []
 
-        with Solver(bootstrap_with=self.clauses) as solver:
+        with Solver(name=solver_name, bootstrap_with=self.clauses) as solver:
             for model in solver.enum_models():
                 terms_assignment = {}
                 for (term, value) in zip(self.terms, model):
@@ -34,5 +34,7 @@ class SATSolver:
 
                 if not return_all_assignments:
                     break
+
+        solver.delete()
 
         return result

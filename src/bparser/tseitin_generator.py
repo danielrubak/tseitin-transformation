@@ -247,9 +247,9 @@ class TseitinFormula:
 
         f.close()
 
-    def solve(self, return_all_assignments=True):
+    def solve(self, solver_name='m22', return_all_assignments=True):
         self.terms_assignment = SATSolver(
-            self.terms, self.clauses).solve(return_all_assignments)
+            self.terms, self.clauses).solve(solver_name, return_all_assignments)
 
     def getTermAssignment(self, only_original=True):
         terms_assignment = []

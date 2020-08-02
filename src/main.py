@@ -18,7 +18,7 @@ def main():
         formula = TseitinFormula(
             formula=formula_value, formula_format=formula_format, export_to_file=True, export_file_name=file_name)
 
-        formula.solve(return_all_assignments=True)
+        formula.solve(solver_name='g4', return_all_assignments=True)
 
         # only for debug purposes
         print(formula_value)
