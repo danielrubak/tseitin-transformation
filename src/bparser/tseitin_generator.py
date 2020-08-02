@@ -1,4 +1,4 @@
-from parser.boolparser import BooleanParser
+from bparser.boolparser import BooleanParser
 from solver.SATSolver import SATSolver
 from utils import tseitin_conversions as tc
 import os

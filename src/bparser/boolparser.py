@@ -1,4 +1,4 @@
-from parser.Tokenizer import *
+from bparser.Tokenizer import *
 
 """
 Grammar:

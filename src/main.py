@@ -1,5 +1,5 @@
-from parser.boolparser import BooleanParser
-from parser.tseitin_generator import TseitinFormula
+from bparser.boolparser import BooleanParser
+from bparser.tseitin_generator import TseitinFormula
 
 
 def main():
