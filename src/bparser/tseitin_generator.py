@@ -9,10 +9,8 @@ class TseitinFormula:
                  import_export_to_file=False, export_to_file=False, export_file_name="data"):
 
         if formula_format == "string":
-            print(formula)
             self.tree = BooleanParser(formula)
         elif formula_format == "dnf_file":
-            print(self.getFormulaFromDnf(formula))
             self.tree = BooleanParser(self.getFormulaFromDnf(formula))
         else:
             raise RuntimeError(
@@ -98,7 +96,8 @@ class TseitinFormula:
                 clause.append(len(self.clauses)-1)
             else:
                 if node.left.negate:
-                    clause.append(self.getNegatedTermClause(node.left))
+                    self.clauses.append(self.getNegatedTermClause(node.left))
+                    clause.append(len(self.clauses)-1)
                 else:
                     clause.append(node.left.value)
 

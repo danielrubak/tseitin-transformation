@@ -3,18 +3,11 @@ from bparser.tseitin_generator import TseitinFormula
 
 
 def main():
-    formulas = [
-        '(a || b) && c || !(d && e)',
-        '(!(p && (q || !r)))',
-        '(a && b) || (a && !c)',
-        '(a && b) or ((c || d) and e)'
-    ]
-
     formulas = {
-        # '(a || b) && c || !(d && e)': 'string',
-        # '(!(p && (q || !r)))': 'string',
-        # '(a && b) || (a && !c)': 'string',
-        # '(a && b) or ((c || d) and e)': 'string',
+        '(a || b) && c || !(d && e)': 'string',
+        '(!(p && (q || !r)))': 'string',
+        '(a && b) || (a && !c)': 'string',
+        '(a && b) or ((c || d) and e)': 'string',
         'src/data/simple_dnf_0.dnf': 'dnf_file'
     }
 
@@ -28,10 +21,10 @@ def main():
         formula.solve(return_all_assignments=True)
 
         # only for debug purposes
-        # print(formula_value)
-        # print(formula.toString())
-        # for terms_assignment in formula.getTermAssignment():
-        # print(terms_assignment)
+        print(formula_value)
+        print(formula.toString())
+        for terms_assignment in formula.getTermAssignment():
+            print(terms_assignment)
 
 
 if __name__ == "__main__":

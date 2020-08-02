@@ -219,7 +219,7 @@ class BooleanParser:
 
     # diagnostic
     def printTree(self, treeNode):
-        print(treeNode.tokenType, ": ", treeNode.carryover)
+        print(treeNode.value, ", ", treeNode.tokenType, ": ", treeNode.carryover)
 
         if treeNode.left != None:
             print("GO LEFT")
