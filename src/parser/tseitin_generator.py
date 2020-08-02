@@ -5,7 +5,7 @@ import os
 
 
 class TseitinFormula:
-    def __init__(self, formula, convert_to_cnf=True, export_to_file=False):
+    def __init__(self, formula, convert_to_cnf=True, export_to_file=False, export_file_name="data"):
         self.tree = BooleanParser(formula)
         self.root = self.tree.root
 
@@ -31,6 +31,9 @@ class TseitinFormula:
 
         if convert_to_cnf:
             self.toCNF()
+
+            if export_to_file:
+                self.exportToFile(export_file_name)
 
     def toCNF(self):
         self.toTseitinClauses(None, self.root)
@@ -175,7 +178,7 @@ class TseitinFormula:
         self.terms = list(dict.fromkeys(terms))
         self.clauses = clauses
 
-    def toString(self):
+    def toString(self, split=True):
         tseitin_formula = ""
         for clause in self.clauses:
             term_str = "("
@@ -192,7 +195,11 @@ class TseitinFormula:
 
             tseitin_formula = tseitin_formula + term_str + " and "
 
-        return tseitin_formula[:-5]
+        tseitin_formula = tseitin_formula[:-5]
+        if split:
+            tseitin_formula = tseitin_formula.replace("and ", "and\n")
+
+        return tseitin_formula
 
     # export Tseitin CNF form to .cnf file
     def exportToFile(self, file_name):
