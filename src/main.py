@@ -20,7 +20,7 @@ def main():
             formula=formula_value, formula_format=formula_format, export_to_file=True, export_file_name=file_name)
 
         formula.solve(solver_name='m22',
-                      return_all_assignments=True, use_timer=True)
+                      return_all_assignments=False, use_timer=True)
 
         # only for debug purposes
         print(formula.getSolverReport())
