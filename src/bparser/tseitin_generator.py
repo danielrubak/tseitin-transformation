@@ -5,8 +5,19 @@ import os
 
 
 class TseitinFormula:
-    def __init__(self, formula, convert_to_cnf=True, export_to_file=False, export_file_name="data"):
-        self.tree = BooleanParser(formula)
+    def __init__(self, formula, formula_format="string", convert_to_cnf=True,
+                 import_export_to_file=False, export_to_file=False, export_file_name="data"):
+
+        if formula_format == "string":
+            print(formula)
+            self.tree = BooleanParser(formula)
+        elif formula_format == "dnf_file":
+            print(self.getFormulaFromDnf(formula))
+            self.tree = BooleanParser(self.getFormulaFromDnf(formula))
+        else:
+            raise RuntimeError(
+                "Unsupported formula format. You can use one of following options: string, dnf_file.")
+
         self.root = self.tree.root
 
         # list of all clauses based on tree
@@ -255,3 +266,67 @@ class TseitinFormula:
             terms_assignment.append(part_assignment)
 
         return terms_assignment
+
+    def getFormulaFromDnf(self, filepath):
+        dnf_file = open(filepath, 'r')
+        initial_lines = True
+        formula = ""
+        for line in dnf_file:
+            if initial_lines:
+                # skip comment lines
+                if line[0] == 'c':
+                    continue
+                # check if file is truly a dnf file inside and switch flag to formula processing
+                elif line[0] == 'p' and line[2:5] == "dnf":
+                    initial_lines = False
+                else:
+                    raise RuntimeError(
+                        "Intial file lines do not follow DNF syntax.")
+            else:
+                # variable used to concatenate digits of variable numbers higher than 9
+                variable_number = ""
+                try_to_place_and = False
+                expect_number = False
+                expect_minus_or_number = False
+                for character in line:
+                    # check if loaded character is of expected type
+                    if expect_minus_or_number and not (character == '-' or character.isdigit()):
+                        raise RuntimeError("Syntax error in clause line.")
+                    else:
+                        expect_minus_or_number = False
+
+                    if expect_number and not character.isdigit():
+                        raise RuntimeError("Syntax error in clause line.")
+                    else:
+                        expect_number = False
+
+                    # if there was an ongoing concatenation of digits but next character is not digit anymore
+                    if variable_number != "" and not character.isdigit():
+                        # it should be whitespace, if so, add a variable called userdefX, where X is concatenated number, to the formula
+                        if character != ' ':
+                            raise RuntimeError("Syntax error in clause line.")
+                        formula = formula + " userdef" + variable_number + " "
+                        variable_number = ""
+
+                    # if the whitespace that caused "and placing" was before next variable and not line-ending zero, the placing should happen
+                    if try_to_place_and and character != '0':
+                        formula += " and "
+                    try_to_place_and = False
+
+                    if character == '-':
+                        formula += " not "
+                        # minus should be followed by variable number
+                        expect_number = True
+                    elif character == ' ':
+                        try_to_place_and = True
+                        # whitespace should be followed by minus, variable number or line-ending zero
+                        expect_minus_or_number = True
+                    elif character.isdigit():
+                        if character == '0' and variable_number == "":
+                            formula += " or "
+                            break
+                        variable_number += character
+                    else:
+                        raise RuntimeError("Syntax error in clause line.")
+        # while returning, cut off the ending containing " or " caused by the last endline
+        return formula[:-4]
