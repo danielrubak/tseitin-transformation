@@ -8,14 +8,20 @@ class TseitinFormula:
     def __init__(self, formula, formula_format="string", convert_to_cnf=True,
                  import_export_to_file=False, export_to_file=False, export_file_name="data"):
 
-        if formula_format == "string":
+        if formula_format == 'string':
+            self.original_formula = formula
             self.tree = BooleanParser(formula)
-        elif formula_format == "dnf_file":
-            self.tree = BooleanParser(self.getFormulaFromDnf(formula))
+        elif formula_format == 'dnf_file':
+            self.original_formula = self.getFormulaFromDnf(formula)
+            self.tree = BooleanParser(self.original_formula)
+        elif formula_format == 'txt_file':
+            self.original_formula = self.getFromulaFromTxt(formula)
+            self.tree = BooleanParser(self.original_formula)
         else:
             raise RuntimeError(
                 "Unsupported formula format. You can use one of following options: string, dnf_file.")
 
+        self.tseitin_formula = ''
         self.root = self.tree.root
 
         # list of all clauses based on tree
@@ -37,6 +43,7 @@ class TseitinFormula:
         self.clause_map = {}
         self.is_valid = True
         self.terms_assignment = {}
+        self.execution_time_str = ''
 
         if convert_to_cnf:
             self.toCNF()
@@ -188,7 +195,9 @@ class TseitinFormula:
         self.terms = list(dict.fromkeys(terms))
         self.clauses = clauses
 
-    def toString(self, split=True):
+        self.tseitin_formula = self.getTseitinFormulaStr(split=False)
+
+    def getTseitinFormulaStr(self, split=True):
         tseitin_formula = ""
         for clause in self.clauses:
             term_str = "("
@@ -211,7 +220,11 @@ class TseitinFormula:
 
         return tseitin_formula
 
+    def toString(self):
+        return self.tseitin_formula
+
     # export Tseitin CNF form to .cnf file
+
     def exportToFile(self, file_name):
         clause_num = len(self.clauses)
         term_num = len(self.terms)
@@ -247,9 +260,12 @@ class TseitinFormula:
 
         f.close()
 
-    def solve(self, solver_name='m22', return_all_assignments=True):
-        self.terms_assignment = SATSolver(
-            self.terms, self.clauses).solve(solver_name, return_all_assignments)
+    def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True):
+        solver_data = SATSolver(
+            self.terms, self.clauses).solve(solver_name, return_all_assignments, use_timer)
+
+        self.execution_time_str = solver_data['execution_time']
+        self.terms_assignment = solver_data['terms_assignment']
 
     def getTermAssignment(self, only_original=True):
         terms_assignment = []
@@ -266,6 +282,7 @@ class TseitinFormula:
 
         return terms_assignment
 
+    # TODO: better file exception handling
     def getFormulaFromDnf(self, filepath):
         dnf_file = open(filepath, 'r')
         initial_lines = True
@@ -327,5 +344,32 @@ class TseitinFormula:
                         variable_number += character
                     else:
                         raise RuntimeError("Syntax error in clause line.")
+
+        dnf_file.close()
+
         # while returning, cut off the ending containing " or " caused by the last endline
         return formula[:-4]
+
+    # TODO: better file exception handling
+    def getFromulaFromTxt(self, filepath):
+        txt_file = open(filepath, 'r')
+
+        formula = ""
+        for line in txt_file:
+            formula = line
+            break
+
+        txt_file.close()
+
+        return formula
+
+    def getSolverReport(self):
+        report_str = "Original formula:\n" + self.original_formula + \
+            "\n\nTseitin formula:\n" + self.tseitin_formula + \
+            "\n\nExecution time:\n" + self.execution_time_str + \
+            "\n\nTerms assignment:\n"
+
+        for terms_assignment in self.getTermAssignment():
+            report_str = report_str + str(terms_assignment) + "\n"
+
+        return report_str
