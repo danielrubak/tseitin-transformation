@@ -6,7 +6,7 @@ import os
 
 class TseitinFormula:
     def __init__(self, formula, formula_format="string", convert_to_cnf=True,
-                 import_export_to_file=False, export_to_file=False, export_file_name="data"):
+                 export_to_file=False, export_file_name="data"):
 
         if formula_format == 'string':
             self.original_formula = formula
