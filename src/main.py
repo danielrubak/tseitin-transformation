@@ -9,7 +9,9 @@ def main():
         '(a && b) || (a && !c)': 'string',
         '(a && b) or ((c || d) and e)': 'string',
         'src/data/simple_dnf_0.dnf': 'dnf_file',
-        'src/data/formula.txt': 'txt_file'
+        'src/data/formula.txt': 'txt_file',
+        'a and !a': 'string',
+        '!x1 and x2 or x1 and !x2 or !x2 and x3': 'string'
     }
 
     for test_id, (formula_value, formula_format) in enumerate(formulas.items()):

@@ -36,6 +36,11 @@ class BooleanParser:
         if self.tokenizer.nextTokenType() == self.tokenizer.getToken('not'):
             whole_expression_negated = True
             self.tokenizer.next()
+
+            # additional check, first token negates only variable, not the whole formula
+            if self.tokenizer.nextTokenType() != self.tokenizer.getToken('lp'):
+                whole_expression_negated = False
+
         self.root = self.parseExpression()
         if whole_expression_negated:
             self.root.negate = True
