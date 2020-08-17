@@ -11,7 +11,8 @@ def main():
         'src/data/simple_dnf_0.dnf': 'dnf_file',
         'src/data/formula.txt': 'txt_file',
         'a and !a': 'string',
-        '!x1 and x2 or x1 and !x2 or !x2 and x3': 'string'
+        '!x1 and x2 or x1 and !x2 or !x2 and x3': 'string',
+        '!a and a': 'string'
     }
 
     for test_id, (formula_value, formula_format) in enumerate(formulas.items()):
