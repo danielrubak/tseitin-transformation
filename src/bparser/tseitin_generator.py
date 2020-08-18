@@ -299,71 +299,70 @@ class TseitinFormula:
 
     # TODO: better file exception handling
     def getFormulaFromDnf(self, filepath):
-        dnf_file = open(filepath, 'r')
-        initial_lines = True
-        formula = ""
-        for line in dnf_file:
-            if initial_lines:
-                # skip comment lines
-                if line[0] == 'c':
-                    continue
-                # check if file is truly a dnf file inside and switch flag to formula processing
-                elif line[0] == 'p' and line[2:5] == "dnf":
-                    initial_lines = False
+        with open(filepath, 'r') as dnf_file:
+            initial_lines = True
+            subformulas_list = []
+            for line in dnf_file:
+                subformula = ""
+                if initial_lines:
+                    # skip comment lines
+                    if line[0] == 'c':
+                        continue
+                    # check if file is truly a dnf file inside and switch flag to formula processing
+                    elif line[0] == 'p' and line[2:5] == "dnf":
+                        initial_lines = False
+                    else:
+                        raise RuntimeError(
+                            "Intial file lines do not follow DNF syntax.")
                 else:
-                    raise RuntimeError(
-                        "Intial file lines do not follow DNF syntax.")
-            else:
-                # variable used to concatenate digits of variable numbers higher than 9
-                variable_number = ""
-                try_to_place_and = False
-                expect_number = False
-                expect_minus_or_number = False
-                for character in line:
-                    # check if loaded character is of expected type
-                    if expect_minus_or_number and not (character == '-' or character.isdigit()):
-                        raise RuntimeError("Syntax error in clause line.")
-                    else:
-                        expect_minus_or_number = False
-
-                    if expect_number and not character.isdigit():
-                        raise RuntimeError("Syntax error in clause line.")
-                    else:
-                        expect_number = False
-
-                    # if there was an ongoing concatenation of digits but next character is not digit anymore
-                    if variable_number != "" and not character.isdigit():
-                        # it should be whitespace, if so, add a variable called userdefX, where X is concatenated number, to the formula
-                        if character != ' ':
-                            raise RuntimeError("Syntax error in clause line.")
-                        formula = formula + " userdef" + variable_number + " "
-                        variable_number = ""
-
-                    # if the whitespace that caused "and placing" was before next variable and not line-ending zero, the placing should happen
-                    if try_to_place_and and character != '0':
-                        formula += " and "
+                    # variable used to concatenate digits of variable numbers higher than 9
+                    variable_number = ""
                     try_to_place_and = False
+                    expect_number = False
+                    expect_minus_or_number = False
+                    for character in line:
+                        # check if loaded character is of expected type
+                        if expect_minus_or_number and not (character == '-' or character.isdigit()):
+                            raise RuntimeError("Syntax error in clause line.")
+                        else:
+                            expect_minus_or_number = False
 
-                    if character == '-':
-                        formula += " not "
-                        # minus should be followed by variable number
-                        expect_number = True
-                    elif character == ' ':
-                        try_to_place_and = True
-                        # whitespace should be followed by minus, variable number or line-ending zero
-                        expect_minus_or_number = True
-                    elif character.isdigit():
-                        if character == '0' and variable_number == "":
-                            formula += " or "
-                            break
-                        variable_number += character
-                    else:
-                        raise RuntimeError("Syntax error in clause line.")
+                        if expect_number and not character.isdigit():
+                            raise RuntimeError("Syntax error in clause line.")
+                        else:
+                            expect_number = False
 
-        dnf_file.close()
+                        # if there was an ongoing concatenation of digits but next character is not digit anymore
+                        if variable_number != "" and not character.isdigit():
+                            # it should be whitespace, if so, add a variable called userdefX, where X is concatenated number, to the formula
+                            if character != ' ':
+                                raise RuntimeError("Syntax error in clause line.")
+                            subformula = subformula + " userdef" + variable_number + " "
+                            variable_number = ""
+
+                        # if the whitespace that caused "and placing" was before next variable and not line-ending zero, the placing should happen
+                        if try_to_place_and and character != '0':
+                            subformula += " and "
+                        try_to_place_and = False
+
+                        if character == '-':
+                            subformula += " not "
+                            # minus should be followed by variable number
+                            expect_number = True
+                        elif character == ' ':
+                            try_to_place_and = True
+                            # whitespace should be followed by minus, variable number or line-ending zero
+                            expect_minus_or_number = True
+                        elif character.isdigit():
+                            if character == '0' and variable_number == "":
+                                subformulas_list.append(subformula)
+                                break
+                            variable_number += character
+                        else:
+                            raise RuntimeError("Syntax error in clause line.")
 
         # while returning, cut off the ending containing " or " caused by the last endline
-        return formula[:-4]
+        return " or ".join(subformulas_list)
 
     # TODO: better file exception handling
     def getFromulaFromTxt(self, filepath):
