@@ -68,27 +68,40 @@ class TseitinFormula:
         # build clause
         clause = []
         if node == self.root:
+
             clause = [
                 None, node.tokenType, None, node.negate
             ]
 
-            not_token = self.tree.tokenizer.getToken('not')
+            var_token = self.tree.tokenizer.getToken('var')
 
             # if left/right child of root is a term then last_clause_ids may be incomplete
             if len(self.last_clause_ids) != 2:
+                # debug purposes only
                 # print("IDS: ", self.last_clause_ids,
                 #       node.left.tokenType, node.left.value, node.right.tokenType, node.right.value)
 
-                if node.left.tokenType == not_token or node.left.tokenType == self.tree.tokenizer.getToken('var'):
+                if node.left.negate == True or node.left.tokenType == var_token:
                     # left child is a term
-                    clause[0] = node.left.value
+                    if node.left.negate:
+                        self.clauses.append(
+                            self.getNegatedTermClause(node.left))
+                        clause[0] = len(self.clauses)-1
+                    else:
+                        clause[0] = node.left.value
                 else:
                     # left child is an operator
                     clause[0] = self.last_clause_ids[0]
 
-                if node.right.tokenType == not_token or node.right.tokenType == self.tree.tokenizer.getToken('var'):
+                if node.right.negate == True or node.right.tokenType == var_token:
                     # right child is a term
-                    clause[2] = node.right.value
+
+                    if node.right.negate:
+                        self.clauses.append(
+                            self.getNegatedTermClause(node.right))
+                        clause[2] = len(self.clauses)-1
+                    else:
+                        clause[2] = node.right.value
                 else:
                     # right child is a operator
                     clause[2] = self.last_clause_ids[0]
@@ -134,6 +147,7 @@ class TseitinFormula:
 
     def getTseitinClauses(self):
         i = 0
+
         for clause in self.clauses:
             logic_var = "phi" + str(i)
             first_term, second_term = "", ""
@@ -192,6 +206,7 @@ class TseitinFormula:
         # append the last variable as clause
         clauses.append([clause])
 
+        # removes duplicates from terms list
         self.terms = list(dict.fromkeys(terms))
         self.clauses = clauses
 

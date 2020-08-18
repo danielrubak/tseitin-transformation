@@ -36,6 +36,13 @@ class BooleanParser:
         if self.tokenizer.nextTokenType() == self.tokenizer.getToken('not'):
             whole_expression_negated = True
             self.tokenizer.next()
+
+            # additional check, first token negates only variable, not the whole formula
+            if self.tokenizer.nextTokenType() != self.tokenizer.getToken('lp'):
+                whole_expression_negated = False
+                # get back to previous node to avoid losing negation
+                self.tokenizer.prev()
+
         self.root = self.parseExpression()
         if whole_expression_negated:
             self.root.negate = True
@@ -219,7 +226,8 @@ class BooleanParser:
 
     # diagnostic
     def printTree(self, treeNode):
-        print(treeNode.value, ", ", treeNode.tokenType, ": ", treeNode.carryover)
+        print(treeNode.value, ", ", treeNode.tokenType,
+              ": ", treeNode.carryover, ",", treeNode.negate)
 
         if treeNode.left != None:
             print("GO LEFT")

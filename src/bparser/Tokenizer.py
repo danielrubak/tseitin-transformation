@@ -31,6 +31,13 @@ class Tokenizer:
         self.i += 1
         return self.tokens[self.i-1]
 
+    def prev(self):
+        self.i -= 1
+
+        if self.i < 0:
+            raise Exception("There is no previous elements")
+        return self.tokens[self.i]
+
     def peek(self):
         if self.hasNext():
             return self.tokens[self.i]
