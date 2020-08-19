@@ -138,6 +138,96 @@ class TseitinFormula:
 
         if prev_node == self.root:
             self.last_clause_ids.append(len(self.clauses)-1)
+            
+    def toTseitinClausesWithStack(self, node):
+        var_token = self.tree.tokenizer.getToken('var')
+        nodestack = deque()
+        current = node
+        previous = None
+
+        while True:
+            while current != None and current.tokenType != var_token:
+                if current.right != None and current.right.tokenType != var_token:
+                    nodestack.append((current, current.right))
+                nodestack.append((previous, current))
+
+                previous = current
+                current = current.left
+            
+            (previous, current) = nodestack.pop()
+
+            if current.right != None and current.right.tokenType != var_token and len(nodestack) > 0 and nodestack[-1][1] == current.right:
+                nodestack.pop()
+                nodestack.append((previous,current))
+                previous = current
+                current = current.right
+            else:
+                #########process current######################
+                # build clause
+                clause = []
+
+                if current == self.root:
+                    clause = [None, current.tokenType, None, current.negate]
+
+                    if len(self.last_clause_ids) != 2:
+                        if current.left.negate == True or current.left.tokenType == var_token:
+                            # left child is a term
+                            if current.left.negate:
+                                self.clauses.append(self.getNegatedTermClause(current.left))
+                                clause[0] = len(self.clauses)-1
+                            else:
+                                clause[0] = current.left.value
+                        else:
+                            # left child is an operator
+                            clause[0] = self.last_clause_ids[0]
+
+                        if current.right.negate == True or current.right.tokenType == var_token:
+                            # right child is a term
+                            if current.right.negate:
+                                self.clauses.append(self.getNegatedTermClause(current.right))
+                                clause[2] = len(self.clauses)-1
+                            else:
+                                clause[2] = current.right.value
+                        else:
+                            # right child is an operator
+                            clause[2] = self.last_clause_ids[0]
+                    else:
+                        # both leaves of root node are operators
+                        clause[0] = self.last_clause_ids[0]
+                        clause[2] = self.last_clause_ids[1]
+                else:
+                    if current.left.value == None:
+                        clause.append(len(self.clauses)-1)
+                    else:
+                        if current.left.negate:
+                            self.clauses.append(self.getNegatedTermClause(current.left))
+                            clause.append(len(self.clauses)-1)
+                        else:
+                            clause.append(current.left.value)
+
+                    clause.append(current.tokenType)
+
+                    if current.right.value == None:
+                        clause.append(len(self.clauses)-1)
+                    else:
+                        if current.right.negate:
+                            self.clauses.append(self.getNegatedTermClause(current.right))
+                            clause.append(len(self.clauses)-1)
+                        else:
+                            clause.append(current.right.value)
+
+                    clause.append(current.negate)
+                self.clauses.append(clause)
+
+                if previous == self.root:
+                    self.last_clause_ids.append(len(self.clauses)-1)
+
+                ############end process current####################
+                previous = current
+                current = None
+
+            if len(nodestack) <= 0:
+                break
 
     def getNegatedTermClause(self, node):
         token = self.tree.tokenizer.getToken('not')
@@ -213,7 +303,7 @@ class TseitinFormula:
         self.tseitin_formula = self.getTseitinFormulaStr(split=False)
 
     def getTseitinFormulaStr(self, split=True):
-        tseitin_formula = ""
+        tseitin_formula = []
         for clause in self.clauses:
             term_str = "("
 
@@ -227,13 +317,14 @@ class TseitinFormula:
             term_str = term_str[:-4]
             term_str = term_str + ")"
 
-            tseitin_formula = tseitin_formula + term_str + " and "
+            tseitin_formula.append(term_str + " and ")
 
-        tseitin_formula = tseitin_formula[:-5]
+        tseitin_formula[-1] = tseitin_formula[-1][:-5]
         if split:
-            tseitin_formula = tseitin_formula.replace("and ", "and\n")
+            for part in tseitin_formula:
+                part = part.replace("and ", "and\n")
 
-        return tseitin_formula
+        return "".join(tseitin_formula)
 
     def toString(self):
         return self.tseitin_formula
@@ -249,31 +340,29 @@ class TseitinFormula:
         script_directory = path_list[0:len(path_list)-1]
         rel_path = "data/" + file_name + ".cnf"
         path = "/".join(script_directory) + "/" + rel_path
-        f = open(path, "w+")
+        with open(path, "w+") as f:
 
-        f.write("c  " + file_name + ".cnf\n")
-        f.write("c\n")
-        f.write("p cnf %d %d\n" % (term_num, clause_num))
+            f.write("c  " + file_name + ".cnf\n")
+            f.write("c\n")
+            f.write("p cnf %d %d\n" % (term_num, clause_num))
 
-        for clause in self.clauses:
-            formatted_clause_list = []
-            for idx, term in enumerate(clause):
-                if term == -1:
-                    continue
+            for clause in self.clauses:
+                formatted_clause_list = []
+                for idx, term in enumerate(clause):
+                    if term == -1:
+                        continue
 
-                term_id = self.terms.index(term) + 1
-                if idx > 0 and clause[idx-1] == -1:
-                    term_id *= -1
+                    term_id = self.terms.index(term) + 1
+                    if idx > 0 and clause[idx-1] == -1:
+                        term_id *= -1
 
-                formatted_clause_list.append(term_id)
+                    formatted_clause_list.append(term_id)
 
-            formatted_clause_list.append(0)
-            clause_str = ' '.join(map(str, formatted_clause_list))
-            clause_str += '\n'
+                formatted_clause_list.append(0)
+                clause_str = ' '.join(map(str, formatted_clause_list))
+                clause_str += '\n'
 
-            f.write(clause_str)
-
-        f.close()
+                f.write(clause_str)
 
     def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True):
         solver_data = SATSolver(
