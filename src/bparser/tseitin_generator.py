@@ -32,7 +32,7 @@ class TseitinFormula:
         self.clauses = []
         self.original_terms = []
         # list of all terms in expression
-        self.terms = []
+        self.terms = {}
 
         # ids of last clause for left and right tree, it is necessary to get the last clause
         self.last_clause_ids = []
@@ -297,7 +297,11 @@ class TseitinFormula:
         clauses.append([clause])
 
         # removes duplicates from terms list
-        self.terms = list(dict.fromkeys(terms))
+        self.terms = dict.fromkeys(terms)
+        idx = 0
+        for t in self.terms:
+            self.terms[t] = idx
+            idx+=1
         self.clauses = clauses
 
         self.tseitin_formula = self.getTseitinFormulaStr(split=False)
@@ -352,7 +356,7 @@ class TseitinFormula:
                     if term == -1:
                         continue
 
-                    term_id = self.terms.index(term) + 1
+                    term_id = self.terms[term] + 1
                     if idx > 0 and clause[idx-1] == -1:
                         term_id *= -1
 
