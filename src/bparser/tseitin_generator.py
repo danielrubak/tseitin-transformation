@@ -1,6 +1,7 @@
 from bparser.boolparser import BooleanParser
 from solver.SATSolver import SATSolver
 from utils import tseitin_conversions as tc
+from collections import deque
 import os
 
 
@@ -48,13 +49,15 @@ class TseitinFormula:
         if convert_to_cnf:
             self.toCNF()
 
-            if export_to_file:
-                self.exportToFile(export_file_name)
+            # if export_to_file:
+            #     self.exportToFile(export_file_name)
 
     def toCNF(self):
-        self.toTseitinClauses(None, self.root)
+        print("Converting data to CNF format")
+        self.toTseitinClausesWithStack(self.root)
         self.getTseitinClauses()
         self.setTseitinFormula()
+        print("Converting complete!")
 
     def toTseitinClauses(self, prev_node, node):
         var_token = self.tree.tokenizer.getToken('var')
@@ -138,7 +141,7 @@ class TseitinFormula:
 
         if prev_node == self.root:
             self.last_clause_ids.append(len(self.clauses)-1)
-            
+
     def toTseitinClausesWithStack(self, node):
         var_token = self.tree.tokenizer.getToken('var')
         nodestack = deque()
@@ -153,12 +156,12 @@ class TseitinFormula:
 
                 previous = current
                 current = current.left
-            
+
             (previous, current) = nodestack.pop()
 
             if current.right != None and current.right.tokenType != var_token and len(nodestack) > 0 and nodestack[-1][1] == current.right:
                 nodestack.pop()
-                nodestack.append((previous,current))
+                nodestack.append((previous, current))
                 previous = current
                 current = current.right
             else:
@@ -173,7 +176,8 @@ class TseitinFormula:
                         if current.left.negate == True or current.left.tokenType == var_token:
                             # left child is a term
                             if current.left.negate:
-                                self.clauses.append(self.getNegatedTermClause(current.left))
+                                self.clauses.append(
+                                    self.getNegatedTermClause(current.left))
                                 clause[0] = len(self.clauses)-1
                             else:
                                 clause[0] = current.left.value
@@ -184,7 +188,8 @@ class TseitinFormula:
                         if current.right.negate == True or current.right.tokenType == var_token:
                             # right child is a term
                             if current.right.negate:
-                                self.clauses.append(self.getNegatedTermClause(current.right))
+                                self.clauses.append(
+                                    self.getNegatedTermClause(current.right))
                                 clause[2] = len(self.clauses)-1
                             else:
                                 clause[2] = current.right.value
@@ -200,7 +205,8 @@ class TseitinFormula:
                         clause.append(len(self.clauses)-1)
                     else:
                         if current.left.negate:
-                            self.clauses.append(self.getNegatedTermClause(current.left))
+                            self.clauses.append(
+                                self.getNegatedTermClause(current.left))
                             clause.append(len(self.clauses)-1)
                         else:
                             clause.append(current.left.value)
@@ -211,7 +217,8 @@ class TseitinFormula:
                         clause.append(len(self.clauses)-1)
                     else:
                         if current.right.negate:
-                            self.clauses.append(self.getNegatedTermClause(current.right))
+                            self.clauses.append(
+                                self.getNegatedTermClause(current.right))
                             clause.append(len(self.clauses)-1)
                         else:
                             clause.append(current.right.value)
@@ -301,7 +308,7 @@ class TseitinFormula:
         idx = 0
         for t in self.terms:
             self.terms[t] = idx
-            idx+=1
+            idx += 1
         self.clauses = clauses
 
         self.tseitin_formula = self.getTseitinFormulaStr(split=False)
@@ -392,6 +399,7 @@ class TseitinFormula:
 
     # TODO: better file exception handling
     def getFormulaFromDnf(self, filepath):
+        print("Loading data from file...")
         with open(filepath, 'r') as dnf_file:
             initial_lines = True
             subformulas_list = []
@@ -402,7 +410,7 @@ class TseitinFormula:
                     if line[0] == 'c':
                         continue
                     # check if file is truly a dnf file inside and switch flag to formula processing
-                    elif line[0] == 'p' and line[2:5] == "dnf":
+                    elif line[0] == 'p' and line[2:5] in ["cnf", "dnf"]:
                         initial_lines = False
                     else:
                         raise RuntimeError(
@@ -429,7 +437,8 @@ class TseitinFormula:
                         if variable_number != "" and not character.isdigit():
                             # it should be whitespace, if so, add a variable called userdefX, where X is concatenated number, to the formula
                             if character != ' ':
-                                raise RuntimeError("Syntax error in clause line.")
+                                raise RuntimeError(
+                                    "Syntax error in clause line.")
                             subformula = subformula + " userdef" + variable_number + " "
                             variable_number = ""
 
@@ -453,6 +462,8 @@ class TseitinFormula:
                             variable_number += character
                         else:
                             raise RuntimeError("Syntax error in clause line.")
+
+        print("The data has been loaded!")
 
         # while returning, cut off the ending containing " or " caused by the last endline
         return " or ".join(subformulas_list)

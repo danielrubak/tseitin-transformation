@@ -2,7 +2,7 @@ from bparser.boolparser import BooleanParser
 from bparser.tseitin_generator import TseitinFormula
 
 
-def main():
+def simple_tests():
     formulas = {
         '(a || b) && c || !(d && e)': 'string',
         '(!(p && (q || !r)))': 'string',
@@ -29,5 +29,19 @@ def main():
         print(formula.getSolverReport())
 
 
+def advanced_test():
+    print("\n=============== ADVANCED TEST ===============\n")
+    input_file_name = 'src/data/Analiza1-itox_vc1033.cnf'
+    formula = TseitinFormula(formula=input_file_name,
+                             formula_format='dnf_file', export_to_file=False)
+
+    formula.solve(solver_name='m22',
+                  return_all_assignments=False, use_timer=True)
+
+
 if __name__ == "__main__":
-    main()
+    # tests for very simple formulas
+    simple_tests()
+
+    # tests for large formulas
+    advanced_test()

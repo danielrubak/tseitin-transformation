@@ -14,7 +14,7 @@ class SATSolver:
                 if term == -1:
                     continue
 
-                term_id = self.terms.index(term) + 1
+                term_id = self.terms[term] + 1
                 if idx > 0 and clause[idx-1] == -1:
                     term_id *= -1
 
@@ -23,6 +23,7 @@ class SATSolver:
             self.clauses.append(part_clause_list)
 
     def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True):
+        print("Starting solver...")
         solver_data = {
             'execution_time': '',
             'terms_assignment': []
@@ -44,5 +45,7 @@ class SATSolver:
 
         solver.delete()
         solver_data['terms_assignment'] = result
+
+        print("Solver is done!")
 
         return solver_data
