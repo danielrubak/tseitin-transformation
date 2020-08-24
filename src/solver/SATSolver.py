@@ -23,7 +23,8 @@ class SATSolver:
             self.clauses.append(part_clause_list)
 
     def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True):
-        print("Starting solver...")
+        print("Solving in progress...")
+
         solver_data = {
             'execution_time': '',
             'terms_assignment': []

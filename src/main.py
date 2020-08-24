@@ -8,8 +8,8 @@ def simple_tests():
         '(!(p && (q || !r)))': 'string',
         '(a && b) || (a && !c)': 'string',
         '(a && b) or ((c || d) and e)': 'string',
-        'src/data/simple_dnf_0.dnf': 'dnf_file',
-        'src/data/formula.txt': 'txt_file',
+        'src/data/simple_dnf_0.dnf': 'file',
+        'src/data/formula.txt': 'file',
         'a and !a': 'string',
         '!x1 and x2 or x1 and !x2 or !x2 and x3': 'string',
         '!a and a': 'string'
@@ -33,10 +33,12 @@ def advanced_test():
     print("\n=============== ADVANCED TEST ===============\n")
     input_file_name = 'src/data/Analiza1-itox_vc1033.cnf'
     formula = TseitinFormula(formula=input_file_name,
-                             formula_format='dnf_file', export_to_file=False)
+                             formula_format='file', export_to_file=False, debug=True)
 
     formula.solve(solver_name='m22',
                   return_all_assignments=False, use_timer=True)
+
+    formula.diagnostic()
 
 
 if __name__ == "__main__":

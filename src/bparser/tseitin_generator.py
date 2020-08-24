@@ -4,23 +4,27 @@ from utils import tseitin_conversions as tc
 from collections import deque
 import os
 
+# TODO: add debug field, there is no reason to pass debug mode to every method
+# TODO: test this on large files
+
 
 class TseitinFormula:
     def __init__(self, formula, formula_format="string", convert_to_cnf=True,
-                 export_to_file=False, export_file_name="data"):
+                 export_to_file=False, export_file_name="data", debug=False):
 
         if formula_format == 'string':
             self.original_formula = formula
-            self.tree = BooleanParser(formula)
-        elif formula_format == 'dnf_file':
-            self.original_formula = self.getFormulaFromDnf(formula)
-            self.tree = BooleanParser(self.original_formula)
-        elif formula_format == 'txt_file':
-            self.original_formula = self.getFromulaFromTxt(formula)
-            self.tree = BooleanParser(self.original_formula)
+        elif formula_format == 'file':
+            self.original_formula = self.getFormulaFromFile(
+                formula, debug=debug)
         else:
             raise RuntimeError(
-                "Unsupported formula format. You can use one of following options: string, dnf_file.")
+                "Unsupported formula format. You can use one of following options: string, file.")
+
+        # parse tree
+        if debug:
+            print("Parsing formula...")
+        self.tree = BooleanParser(self.original_formula)
 
         self.tseitin_formula = ''
         self.root = self.tree.root
@@ -47,17 +51,21 @@ class TseitinFormula:
         self.execution_time_str = ''
 
         if convert_to_cnf:
-            self.toCNF()
+            self.toCNF(debug=debug)
 
             # if export_to_file:
             #     self.exportToFile(export_file_name)
 
-    def toCNF(self):
-        print("Converting data to CNF format")
+    def toCNF(self, debug=False):
+        if debug:
+            print("Converting data to Tseitin formula...")
+
         self.toTseitinClausesWithStack(self.root)
         self.getTseitinClauses()
         self.setTseitinFormula()
-        print("Converting complete!")
+
+        if debug:
+            print("Converting complete!")
 
     def toTseitinClauses(self, prev_node, node):
         var_token = self.tree.tokenizer.getToken('var')
@@ -142,6 +150,7 @@ class TseitinFormula:
         if prev_node == self.root:
             self.last_clause_ids.append(len(self.clauses)-1)
 
+    # TODO: rename to: toTseitinClauses
     def toTseitinClausesWithStack(self, node):
         var_token = self.tree.tokenizer.getToken('var')
         nodestack = deque()
@@ -340,8 +349,8 @@ class TseitinFormula:
     def toString(self):
         return self.tseitin_formula
 
+    # TODO: fix this method, useless with large formulas
     # export Tseitin CNF form to .cnf file
-
     def exportToFile(self, file_name):
         clause_num = len(self.clauses)
         term_num = len(self.terms)
@@ -375,6 +384,7 @@ class TseitinFormula:
 
                 f.write(clause_str)
 
+    # TODO: this method should show messages depends on debug mode
     def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True):
         solver_data = SATSolver(
             self.terms, self.clauses).solve(solver_name, return_all_assignments, use_timer)
@@ -397,24 +407,43 @@ class TseitinFormula:
 
         return terms_assignment
 
-    # TODO: better file exception handling
-    def getFormulaFromDnf(self, filepath):
-        print("Loading data from file...")
-        with open(filepath, 'r') as dnf_file:
+    def getFormulaFromFile(self, filepath, debug=True):
+        _, file = os.path.split(filepath)
+        extension = file.split(".")[-1]
+
+        if extension not in ["txt", "cnf", "dnf"]:
+            raise RuntimeError(
+                f'Not supported file extension: \'{extension}\'...')
+
+        if debug:
+            print(f'Loading data from file: \'{file}\'...')
+
+        if extension == "txt":
+            formula = self.getFromulaFromTxt(filepath)
+        elif extension in ["cnf", "dnf"]:
+            formula = self.getFormulaFromDIMAC(filepath)
+
+        if debug:
+            print("The data has been loaded!")
+
+        return formula
+
+    def getFormulaFromDIMAC(self, filepath):
+        with open(filepath, 'r') as file:
             initial_lines = True
             subformulas_list = []
-            for line in dnf_file:
+            for line in file:
                 subformula = ""
                 if initial_lines:
                     # skip comment lines
                     if line[0] == 'c':
                         continue
-                    # check if file is truly a dnf file inside and switch flag to formula processing
+                    # check if file is truly a dnf or cnf file inside and switch flag to formula processing
                     elif line[0] == 'p' and line[2:5] in ["cnf", "dnf"]:
                         initial_lines = False
                     else:
                         raise RuntimeError(
-                            "Intial file lines do not follow DNF syntax.")
+                            "Intial file lines do not follow DNF or CNF syntax.")
                 else:
                     # variable used to concatenate digits of variable numbers higher than 9
                     variable_number = ""
@@ -463,13 +492,14 @@ class TseitinFormula:
                         else:
                             raise RuntimeError("Syntax error in clause line.")
 
-        print("The data has been loaded!")
-
         # while returning, cut off the ending containing " or " caused by the last endline
         return " or ".join(subformulas_list)
 
-    # TODO: better file exception handling
+    # TODO: read data using with statement
+    # TODO: better reading method, now it reads only one line
+    # TODO: better exception handling
     def getFromulaFromTxt(self, filepath):
+
         txt_file = open(filepath, 'r')
 
         formula = ""
@@ -481,6 +511,8 @@ class TseitinFormula:
 
         return formula
 
+    # TODO: there is no way to generate report for large formulas, export result to file
+    # TODO: show warning to user
     def getSolverReport(self):
         original_terms = list(set(self.original_terms))
         original_terms = [x for x in original_terms if x != None]
@@ -496,3 +528,11 @@ class TseitinFormula:
             report_str += str(terms_assignment) + "\n"
 
         return report_str
+
+    # TODO: remove when development finished
+    def diagnostic(self):
+        original_terms = list(set(self.original_terms))
+        original_terms = [x for x in original_terms if x != None]
+
+        print(len(original_terms))
+        print(len(self.original_formula))
