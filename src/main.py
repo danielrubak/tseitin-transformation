@@ -31,7 +31,33 @@ def simple_tests():
 
 def advanced_test():
     print("\n=============== ADVANCED TEST ===============\n")
-    input_file_name = 'src/data/Analiza1-itox_vc1033.cnf'
+
+    files_map = {
+        0: 'src/data/easy-sat-0.cnf',
+        1: 'src/data/easy-sat-1.cnf',
+        2: 'src/data/easy-unsat-0.cnf',
+        3: 'src/data/easy-unsat-1.cnf',
+        4: 'src/data/medium-sat-0.cnf',
+        5: 'src/data/medium-sat-1.cnf',
+        6: 'src/data/medium-sat-2.cnf',
+        7: 'src/data/medium-sat-3.cnf',
+        8: 'src/data/medium-unsat-0.cnf',
+        9: 'src/data/medium-unsat-1.cnf',
+        10: 'src/data/medium-unsat-2.cnf',
+        11: 'src/data/medium-unsat-3.cnf',
+        12: 'src/data/hard-sat-0.cnf',
+        13: 'src/data/hard-sat-1.cnf',
+        14: 'src/data/hard-sat-2.cnf',
+        15: 'src/data/hard-sat-3.cnf',
+        16: 'src/data/hard-unsat-0.cnf',
+        17: 'src/data/hard-unsat-1.cnf',
+        18: 'src/data/hard-unsat-2.cnf',
+        19: 'src/data/hard-unsat-3.cnf',
+        20: 'src/data/very-hard-sat.cnf',
+        21: 'src/data/very-hard-unsat.cnf'
+    }
+
+    input_file_name = files_map[21]
     formula = TseitinFormula(formula=input_file_name,
                              formula_format='file', export_to_file=False, debug=True)
 

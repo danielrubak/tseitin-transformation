@@ -4,9 +4,6 @@ from utils import tseitin_conversions as tc
 from collections import deque
 import os
 
-# TODO: add debug field, there is no reason to pass debug mode to every method
-# TODO: test this on large files
-
 
 class TseitinFormula:
     def __init__(self, formula, formula_format="string", convert_to_cnf=True,
@@ -21,8 +18,9 @@ class TseitinFormula:
             raise RuntimeError(
                 "Unsupported formula format. You can use one of following options: string, file.")
 
+        self.debug = debug
         # parse tree
-        if debug:
+        if self.debug:
             print("Parsing formula...")
         self.tree = BooleanParser(self.original_formula)
 
@@ -51,107 +49,23 @@ class TseitinFormula:
         self.execution_time_str = ''
 
         if convert_to_cnf:
-            self.toCNF(debug=debug)
+            self.toCNF()
 
             # if export_to_file:
             #     self.exportToFile(export_file_name)
 
-    def toCNF(self, debug=False):
-        if debug:
+    def toCNF(self):
+        if self.debug:
             print("Converting data to Tseitin formula...")
 
-        self.toTseitinClausesWithStack(self.root)
+        self.toTseitinClauses(self.root)
         self.getTseitinClauses()
         self.setTseitinFormula()
 
-        if debug:
+        if self.debug:
             print("Converting complete!")
 
-    def toTseitinClauses(self, prev_node, node):
-        var_token = self.tree.tokenizer.getToken('var')
-
-        if node.left != None and node.left.tokenType != var_token:
-            self.toTseitinClauses(node, node.left)
-
-        if node.right != None and node.right.tokenType != var_token:
-            self.toTseitinClauses(node, node.right)
-
-        # build clause
-        clause = []
-        if node == self.root:
-
-            clause = [
-                None, node.tokenType, None, node.negate
-            ]
-
-            var_token = self.tree.tokenizer.getToken('var')
-
-            # if left/right child of root is a term then last_clause_ids may be incomplete
-            if len(self.last_clause_ids) != 2:
-                # debug purposes only
-                # print("IDS: ", self.last_clause_ids,
-                #       node.left.tokenType, node.left.value, node.right.tokenType, node.right.value)
-
-                if node.left.negate == True or node.left.tokenType == var_token:
-                    # left child is a term
-                    if node.left.negate:
-                        self.clauses.append(
-                            self.getNegatedTermClause(node.left))
-                        clause[0] = len(self.clauses)-1
-                    else:
-                        clause[0] = node.left.value
-                else:
-                    # left child is an operator
-                    clause[0] = self.last_clause_ids[0]
-
-                if node.right.negate == True or node.right.tokenType == var_token:
-                    # right child is a term
-
-                    if node.right.negate:
-                        self.clauses.append(
-                            self.getNegatedTermClause(node.right))
-                        clause[2] = len(self.clauses)-1
-                    else:
-                        clause[2] = node.right.value
-                else:
-                    # right child is a operator
-                    clause[2] = self.last_clause_ids[0]
-
-            else:
-                # both leaves of root node are operators
-                clause[0] = self.last_clause_ids[0]
-                clause[2] = self.last_clause_ids[1]
-
-        else:
-            if node.left.value == None:
-                clause.append(len(self.clauses)-1)
-            else:
-                if node.left.negate:
-                    self.clauses.append(self.getNegatedTermClause(node.left))
-                    clause.append(len(self.clauses)-1)
-                else:
-                    clause.append(node.left.value)
-
-            clause.append(node.tokenType)
-
-            if node.right.value == None:
-                clause.append(len(self.clauses)-1)
-            else:
-                if node.right.negate:
-                    self.clauses.append(self.getNegatedTermClause(node.right))
-                    clause.append(len(self.clauses)-1)
-                else:
-                    clause.append(node.right.value)
-
-            clause.append(node.negate)
-
-        self.clauses.append(clause)
-
-        if prev_node == self.root:
-            self.last_clause_ids.append(len(self.clauses)-1)
-
-    # TODO: rename to: toTseitinClauses
-    def toTseitinClausesWithStack(self, node):
+    def toTseitinClauses(self, node):
         var_token = self.tree.tokenizer.getToken('var')
         nodestack = deque()
         current = node
@@ -384,13 +298,18 @@ class TseitinFormula:
 
                 f.write(clause_str)
 
-    # TODO: this method should show messages depends on debug mode
     def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True):
+        if self.debug:
+            print("Solving in progress...")
+
         solver_data = SATSolver(
             self.terms, self.clauses).solve(solver_name, return_all_assignments, use_timer)
 
         self.execution_time_str = solver_data['execution_time']
         self.terms_assignment = solver_data['terms_assignment']
+
+        if self.debug:
+            print("Solver is done!")
 
     def getTermAssignment(self, only_original=True):
         terms_assignment = []

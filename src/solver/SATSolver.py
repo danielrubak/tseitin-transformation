@@ -23,8 +23,6 @@ class SATSolver:
             self.clauses.append(part_clause_list)
 
     def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True):
-        print("Solving in progress...")
-
         solver_data = {
             'execution_time': '',
             'terms_assignment': []
@@ -46,7 +44,5 @@ class SATSolver:
 
         solver.delete()
         solver_data['terms_assignment'] = result
-
-        print("Solver is done!")
 
         return solver_data
