@@ -1,19 +1,24 @@
 from bparser.boolparser import BooleanParser
 from solver.SATSolver import SATSolver
 from utils import tseitin_conversions as tc
-from collections import deque
+from collections import deque, defaultdict
 import os
+import time
+import csv
+import re
 
 
 class TseitinFormula:
     def __init__(self, formula, formula_format="string", convert_to_cnf=True,
                  export_to_file=False, export_file_name="data", debug=False):
 
+        self.inputFile = None
         if formula_format == 'string':
             self.original_formula = formula
         elif formula_format == 'file':
             self.original_formula = self.getFormulaFromFile(
                 formula, debug=debug)
+            self.inputFile = formula
         else:
             raise RuntimeError(
                 "Unsupported formula format. You can use one of following options: string, file.")
@@ -326,6 +331,22 @@ class TseitinFormula:
 
         return terms_assignment
 
+    def getTermsAssignment(self, only_original=True):
+        if only_original:
+            terms_assignment = list()
+            p = re.compile('phi*')
+            for assignment in self.terms_assignment:
+                part_assignment = dict()
+                for term, value in assignment.items():
+                    if not p.match(term):
+                        part_assignment[term] = value
+
+                terms_assignment.append(part_assignment)
+        else:
+            terms_assignment = self.terms_assignment
+
+        return terms_assignment
+
     def getFormulaFromFile(self, filepath, debug=True):
         _, file = os.path.split(filepath)
         extension = file.split(".")[-1]
@@ -430,28 +451,56 @@ class TseitinFormula:
 
         return formula
 
-    # TODO: there is no way to generate report for large formulas, export result to file
-    # TODO: show warning to user
     def getSolverReport(self):
+        report = []
+
         original_terms = list(set(self.original_terms))
         original_terms = [x for x in original_terms if x != None]
+        original_terms_num = len(original_terms)
+        tseitin_terms_num = len(self.terms)
+        total_terms_num = original_terms_num + tseitin_terms_num
 
-        report_str = "Original formula:\n" + self.original_formula + \
-            "\n\nTseitin formula:\n" + self.tseitin_formula + \
-            "\n\nOriginal number of terms:\n" + str(len(original_terms)) + \
-            "\n\nTseitin number of terms:\n" + str(len(self.terms)) + \
-            "\n\nExecution time:\n" + self.execution_time_str + \
+        report = [
+            "Original formula:" + self.original_formula,
+            "\n\nTseitin formula:\n" + self.tseitin_formula,
+            "\n\nOriginal number of terms:\n" + str(original_terms_num),
+            "\n\nTseitin number of terms:\n" + str(tseitin_terms_num),
+            "\n\nTotal number of terms:\n" + str(total_terms_num),
+            "\n\nTotal number of clauses:\n" + str(len(self.clauses)),
+            "\n\nExecution time:\n" + self.execution_time_str,
             "\n\nTerms assignment:\n"
+        ]
 
-        for terms_assignment in self.getTermAssignment():
-            report_str += str(terms_assignment) + "\n"
+        for terms_assignment in self.getTermsAssignment():
+            report.append(str(terms_assignment) + "\n")
 
-        return report_str
+        return "".join(report)
 
-    # TODO: remove when development finished
-    def diagnostic(self):
+    def exportReport2CSV(self):
         original_terms = list(set(self.original_terms))
         original_terms = [x for x in original_terms if x != None]
+        original_terms_num = len(original_terms)
+        tseitin_terms_num = len(self.terms)
+        total_terms_num = original_terms_num + tseitin_terms_num
 
-        print(len(original_terms))
-        print(len(self.original_formula))
+        report_summary = [
+            ["File name", self.inputFile if None else "--"],
+            ["Original number of terms", original_terms_num],
+            ["Tseitin number of terms", tseitin_terms_num],
+            ["Total number of terms", total_terms_num],
+            ["Total number of clauses", len(self.clauses)],
+            ["Execution time", self.execution_time_str],
+            ["Terms assignment"]
+        ]
+
+        report_data = defaultdict(list)
+        for terms_assignment in self.getTermsAssignment():
+            for term, value in terms_assignment.items():
+                report_data[term].append(value)
+
+        with open('src/data/report.csv', 'w') as file:
+            writer = csv.writer(file)
+            writer.writerows(report_summary)
+
+            for term, values in report_data.items():
+                writer.writerow([term] + values)
