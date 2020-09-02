@@ -67,10 +67,7 @@ def advanced_test():
     formula = TseitinFormula(formula=input_file_name,
                              formula_format='file', export_to_file=False, debug=True)
 
-    formula.solve(solver_name='m22',
-                  return_all_assignments=False, use_timer=True)
-
-    formula.getSolverReport()
+    report_str = formula.getSolverReport()
 
     # only for debug purposes
     start_time = time.time()

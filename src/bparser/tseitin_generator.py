@@ -9,28 +9,12 @@ import re
 
 
 class TseitinFormula:
-    def __init__(self, formula, formula_format="string", convert_to_cnf=True,
-                 export_to_file=False, export_file_name="data", debug=False):
+    def __init__(self, formula, formula_format="string", export_to_file=False, export_file_name="data", debug=False, use_solver=True,
+                 solver_name='m22', return_all_assignments=False, use_timer=True):
 
         self.inputFile = None
-        if formula_format == 'string':
-            self.original_formula = formula
-        elif formula_format == 'file':
-            self.original_formula = self.getFormulaFromFile(
-                formula, debug=debug)
-            self.inputFile = formula
-        else:
-            raise RuntimeError(
-                "Unsupported formula format. You can use one of following options: string, file.")
-
+        self.root = None
         self.debug = debug
-        # parse tree
-        if self.debug:
-            print("Parsing formula...")
-        self.tree = BooleanParser(self.original_formula)
-
-        self.tseitin_formula = ''
-        self.root = self.tree.root
 
         # list of all clauses based on tree
         # every clause is a list, where:
@@ -38,7 +22,9 @@ class TseitinFormula:
         # id = 1: operator id
         # id = 2: second term or index of another clause
         self.clauses = []
+
         self.original_terms = []
+
         # list of all terms in expression
         self.terms = {}
 
@@ -49,15 +35,41 @@ class TseitinFormula:
         # keys: clause name, for example phi0
         # values: dict with keys 'first_term', 'second_term', 'operator', 'is_negated'
         self.clause_map = {}
-        self.is_valid = True
+
         self.terms_assignment = {}
-        self.execution_time_str = ''
+        self.execution_time_str = '--'
 
-        if convert_to_cnf:
-            self.toCNF()
+        # solver params
+        self.solver_name = solver_name
+        self.return_all_assignments = return_all_assignments
+        self.use_timer = use_timer
 
-            # if export_to_file:
-            #     self.exportToFile(export_file_name)
+        if formula_format == 'string':
+            self.original_formula = formula
+        elif formula_format == 'file':
+            self.original_formula = self.getFormulaFromFile(
+                formula, debug=debug)
+            self.inputFile = formula
+        else:
+            raise RuntimeError(
+                "Unsupported formula format. You can use one of following options: string, file.")
+
+        # parse tree
+        if self.debug:
+            print("Parsing formula...")
+        self.tree = BooleanParser(self.original_formula)
+        self.root = self.tree.root
+        if self.debug:
+            print("Parsing complete!")
+
+        self.toCNF()
+
+        if use_solver:
+            self.solve(solver_name=self.solver_name,
+                       return_all_assignments=self.return_all_assignments, use_timer=self.use_timer)
+
+        # if export_to_file:
+        #     self.exportToFile(export_file_name)
 
     def toCNF(self):
         if self.debug:
@@ -239,8 +251,6 @@ class TseitinFormula:
             idx += 1
         self.clauses = clauses
 
-        self.tseitin_formula = self.getTseitinFormulaStr(split=False)
-
     def getTseitinFormulaStr(self, split=True):
         tseitin_formula = []
         for clause in self.clauses:
@@ -266,7 +276,7 @@ class TseitinFormula:
         return "".join(tseitin_formula)
 
     def toString(self):
-        return self.tseitin_formula
+        return self.getTseitinFormulaStr(split=False)
 
     # TODO: fix this method, useless with large formulas
     # export Tseitin CNF form to .cnf file
@@ -342,10 +352,9 @@ class TseitinFormula:
                         part_assignment[term] = value
 
                 terms_assignment.append(part_assignment)
+            return terms_assignment
         else:
-            terms_assignment = self.terms_assignment
-
-        return terms_assignment
+            return self.terms_assignment
 
     def getFormulaFromFile(self, filepath, debug=True):
         _, file = os.path.split(filepath)
@@ -456,13 +465,14 @@ class TseitinFormula:
 
         original_terms = list(set(self.original_terms))
         original_terms = [x for x in original_terms if x != None]
+        tseitin_formula = self.getTseitinFormulaStr(split=False)
         original_terms_num = len(original_terms)
         tseitin_terms_num = len(self.terms)
         total_terms_num = original_terms_num + tseitin_terms_num
 
         report = [
             "Original formula:" + self.original_formula,
-            "\n\nTseitin formula:\n" + self.tseitin_formula,
+            "\n\nTseitin formula:\n" + tseitin_formula,
             "\n\nOriginal number of terms:\n" + str(original_terms_num),
             "\n\nTseitin number of terms:\n" + str(tseitin_terms_num),
             "\n\nTotal number of terms:\n" + str(total_terms_num),
@@ -477,6 +487,9 @@ class TseitinFormula:
         return "".join(report)
 
     def exportReport2CSV(self):
+        if self.debug:
+            print("Saving report to CSV file...")
+
         original_terms = list(set(self.original_terms))
         original_terms = [x for x in original_terms if x != None]
         original_terms_num = len(original_terms)
@@ -504,3 +517,6 @@ class TseitinFormula:
 
             for term, values in report_data.items():
                 writer.writerow([term] + values)
+
+        if self.debug:
+            print("Report was saved successfully!")
