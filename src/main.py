@@ -6,14 +6,14 @@ import time
 def simple_tests():
     formulas = {
         '(a || b) && c || !(d && e)': 'string',
-        # '(!(p && (q || !r)))': 'string',
-        # '(a && b) || (a && !c)': 'string',
-        # '(a && b) or ((c || d) and e)': 'string',
-        # 'src/data/simple_dnf_0.dnf': 'file',
-        # 'src/data/formula.txt': 'file',
-        # 'a and !a': 'string',
-        # '!x1 and x2 or x1 and !x2 or !x2 and x3': 'string',
-        # '!a and a': 'string'
+        '(!(p && (q || !r)))': 'string',
+        '(a && b) || (a && !c)': 'string',
+        '(a && b) or ((c || d) and e)': 'string',
+        'src/data/simple_dnf_0.dnf': 'file',
+        'src/data/formula.txt': 'file',
+        'a and !a': 'string',
+        '!x1 and x2 or x1 and !x2 or !x2 and x3': 'string',
+        '!a and a': 'string'
     }
 
     for test_id, (formula_value, formula_format) in enumerate(formulas.items()):
@@ -24,13 +24,10 @@ def simple_tests():
         #     formula=formula_value, formula_format=formula_format, export_to_file=True, export_file_name=file_name)
 
         formula = TseitinFormula(
-            formula=formula_value, formula_format=formula_format, export_to_cnf_file=True, debug=True)
-
-        formula.solve(solver_name='m22',
-                      return_all_assignments=True, use_timer=True)
+            formula=formula_value, formula_format=formula_format, export_to_cnf_file=True, debug=True, interrupt_time=4, return_all_assignments=True)
 
         # only for debug purposes
-        print(formula.getSolverReport())
+        # print(formula.getSolverReport())
 
 
 def advanced_test():

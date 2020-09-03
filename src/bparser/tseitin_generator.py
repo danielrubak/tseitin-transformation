@@ -10,7 +10,7 @@ import re
 
 class TseitinFormula:
     def __init__(self, formula, formula_format="string", export_to_cnf_file=False, debug=False, use_solver=True,
-                 solver_name='m22', return_all_assignments=False, use_timer=True):
+                 solver_name='m22', return_all_assignments=False, use_timer=True, interrupt_time=None):
 
         self.inputFile = None
         self.root = None
@@ -65,8 +65,8 @@ class TseitinFormula:
         self.toCNF()
 
         if use_solver:
-            self.solve(solver_name=self.solver_name,
-                       return_all_assignments=self.return_all_assignments, use_timer=self.use_timer)
+            self.solve(solver_name=self.solver_name, return_all_assignments=self.return_all_assignments,
+                       use_timer=self.use_timer, interrupt_time=interrupt_time)
 
         if export_to_cnf_file:
             if self.debug:
@@ -109,7 +109,6 @@ class TseitinFormula:
                 previous = current
                 current = current.right
             else:
-                #########process current######################
                 # build clause
                 clause = []
 
@@ -173,7 +172,6 @@ class TseitinFormula:
                 if previous == self.root:
                     self.last_clause_ids.append(len(self.clauses)-1)
 
-                ############end process current####################
                 previous = current
                 current = None
 
@@ -322,12 +320,12 @@ class TseitinFormula:
 
             file.write('\n'.join(map(str, clauses)))
 
-    def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True):
+    def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True, interrupt_time=None):
         if self.debug:
             print("Solving in progress...")
 
         solver_data = SATSolver(
-            self.terms, self.clauses).solve(solver_name, return_all_assignments, use_timer)
+            self.terms, self.clauses).solve(solver_name, return_all_assignments, use_timer, interrupt_time=interrupt_time)
 
         self.execution_time_str = solver_data['execution_time']
         self.terms_assignment = solver_data['terms_assignment']
