@@ -2,14 +2,14 @@ from bparser.boolparser import BooleanParser
 from solver.SATSolver import SATSolver
 from utils import tseitin_conversions as tc
 from collections import deque, defaultdict
+from datetime import datetime
 import os
-import time
 import csv
 import re
 
 
 class TseitinFormula:
-    def __init__(self, formula, formula_format="string", export_to_file=False, export_file_name="data", debug=False, use_solver=True,
+    def __init__(self, formula, formula_format="string", export_to_cnf_file=False, debug=False, use_solver=True,
                  solver_name='m22', return_all_assignments=False, use_timer=True):
 
         self.inputFile = None
@@ -60,7 +60,7 @@ class TseitinFormula:
         self.tree = BooleanParser(self.original_formula)
         self.root = self.tree.root
         if self.debug:
-            print("Parsing complete!")
+            print("Parsing complete!\n")
 
         self.toCNF()
 
@@ -68,8 +68,12 @@ class TseitinFormula:
             self.solve(solver_name=self.solver_name,
                        return_all_assignments=self.return_all_assignments, use_timer=self.use_timer)
 
-        # if export_to_file:
-        #     self.exportToFile(export_file_name)
+        if export_to_cnf_file:
+            if self.debug:
+                print("Export formula to CNF file...")
+            self.export2CNF()
+            if self.debug:
+                print("Successful data export!\n")
 
     def toCNF(self):
         if self.debug:
@@ -80,7 +84,7 @@ class TseitinFormula:
         self.setTseitinFormula()
 
         if self.debug:
-            print("Converting complete!")
+            print("Converting complete!\n")
 
     def toTseitinClauses(self, node):
         var_token = self.tree.tokenizer.getToken('var')
@@ -278,23 +282,28 @@ class TseitinFormula:
     def toString(self):
         return self.getTseitinFormulaStr(split=False)
 
-    # TODO: fix this method, useless with large formulas
     # export Tseitin CNF form to .cnf file
-    def exportToFile(self, file_name):
-        clause_num = len(self.clauses)
-        term_num = len(self.terms)
+    def export2CNF(self):
+        clauses_num = len(self.clauses)
+        terms_num = len(self.terms)
 
         script_path = os.path.dirname(__file__)
+        os_sep = os.sep
         path_list = script_path.split(os.sep)
         script_directory = path_list[0:len(path_list)-1]
-        rel_path = "data/" + file_name + ".cnf"
-        path = "/".join(script_directory) + "/" + rel_path
-        with open(path, "w+") as f:
 
-            f.write("c  " + file_name + ".cnf\n")
-            f.write("c\n")
-            f.write("p cnf %d %d\n" % (term_num, clause_num))
+        file_name = f'{datetime.now().strftime("%d_%m_%Y_%H_%M_%S")}_data.cnf'
+        rel_path = f'data{os_sep}{file_name}'
+        path = f'{os_sep.join(script_directory)}{os_sep}{rel_path}'
 
+        with open(path, "w+") as file:
+            file.write(f'c {file_name}\n')
+            if self.inputFile:
+                file.write(f'c formula input file: {self.inputFile}')
+            file.write("c\n")
+            file.write(f'p cnf {terms_num} {clauses_num}')
+
+            clauses = []
             for clause in self.clauses:
                 formatted_clause_list = []
                 for idx, term in enumerate(clause):
@@ -308,10 +317,10 @@ class TseitinFormula:
                     formatted_clause_list.append(term_id)
 
                 formatted_clause_list.append(0)
-                clause_str = ' '.join(map(str, formatted_clause_list))
-                clause_str += '\n'
+                clauses.append(" ".join([str(i)
+                                         for i in formatted_clause_list]))
 
-                f.write(clause_str)
+            file.write('\n'.join(map(str, clauses)))
 
     def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True):
         if self.debug:
@@ -324,7 +333,7 @@ class TseitinFormula:
         self.terms_assignment = solver_data['terms_assignment']
 
         if self.debug:
-            print("Solver is done!")
+            print("Solver is done!\n")
 
     def getTermAssignment(self, only_original=True):
         terms_assignment = []
@@ -373,7 +382,7 @@ class TseitinFormula:
             formula = self.getFormulaFromDIMAC(filepath)
 
         if debug:
-            print("The data has been loaded!")
+            print("The data has been loaded!\n")
 
         return formula
 
@@ -519,4 +528,4 @@ class TseitinFormula:
                 writer.writerow([term] + values)
 
         if self.debug:
-            print("Report was saved successfully!")
+            print("Report was saved successfully!\n")

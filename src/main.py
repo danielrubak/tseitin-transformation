@@ -1,16 +1,15 @@
 from bparser.boolparser import BooleanParser
 from bparser.tseitin_generator import TseitinFormula
 import time
-import re
 
 
 def simple_tests():
     formulas = {
-        # '(a || b) && c || !(d && e)': 'string',
+        '(a || b) && c || !(d && e)': 'string',
         # '(!(p && (q || !r)))': 'string',
         # '(a && b) || (a && !c)': 'string',
         # '(a && b) or ((c || d) and e)': 'string',
-        'src/data/simple_dnf_0.dnf': 'file',
+        # 'src/data/simple_dnf_0.dnf': 'file',
         # 'src/data/formula.txt': 'file',
         # 'a and !a': 'string',
         # '!x1 and x2 or x1 and !x2 or !x2 and x3': 'string',
@@ -25,7 +24,7 @@ def simple_tests():
         #     formula=formula_value, formula_format=formula_format, export_to_file=True, export_file_name=file_name)
 
         formula = TseitinFormula(
-            formula=formula_value, formula_format=formula_format, export_to_file=False, debug=True)
+            formula=formula_value, formula_format=formula_format, export_to_cnf_file=True, debug=True)
 
         formula.solve(solver_name='m22',
                       return_all_assignments=True, use_timer=True)
@@ -65,7 +64,7 @@ def advanced_test():
 
     input_file_name = files_map[21]
     formula = TseitinFormula(formula=input_file_name,
-                             formula_format='file', export_to_file=False, debug=True)
+                             formula_format='file', export_to_cnf_file=True, debug=True)
 
     report_str = formula.getSolverReport()
 
