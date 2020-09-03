@@ -30,8 +30,7 @@ def simple_tests():
                       return_all_assignments=True, use_timer=True)
 
         # only for debug purposes
-        # formula.getSolverReport()
-        # formula.exportReport2CSV()
+        print(formula.getSolverReport())
 
 
 def advanced_test():
@@ -63,20 +62,13 @@ def advanced_test():
     }
 
     input_file_name = files_map[21]
-    formula = TseitinFormula(formula=input_file_name,
-                             formula_format='file', export_to_cnf_file=True, debug=True)
-
-    report_str = formula.getSolverReport()
-
-    # only for debug purposes
-    start_time = time.time()
-    formula.exportReport2CSV()
-    print("--- %s seconds ---" % (time.time() - start_time))
+    _ = TseitinFormula(formula=input_file_name,
+                       formula_format='file', export_to_cnf_file=True, debug=True)
 
 
 if __name__ == "__main__":
     # tests for very simple formulas
-    # simple_tests()
+    simple_tests()
 
     # tests for large formulas
-    advanced_test()
+    # advanced_test()

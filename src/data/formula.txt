@@ -1,1 +1,3 @@
-((a and b or c) or (d or e or !f)) or ((!g or !h and i) and (j and k or l)) and ((a and m or n) or (!m and p or !q) and (d and e and w)) or ((z and y and !g) or (v and w) and (!z and !u or !e))
+((a and b or c) or (d or e or !f)) or ((!g or !h and i) and (j and k or l)) and 
+((a and m or n) or (!m and p or !q) and (d and e and w)) or 
+((z and y and !g) or (v and w) and (!z and !u or !e))

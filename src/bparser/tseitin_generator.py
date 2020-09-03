@@ -299,7 +299,7 @@ class TseitinFormula:
         with open(path, "w+") as file:
             file.write(f'c {file_name}\n')
             if self.inputFile:
-                file.write(f'c formula input file: {self.inputFile}')
+                file.write(f'c formula input file: {self.inputFile}\n')
             file.write("c\n")
             file.write(f'p cnf {terms_num} {clauses_num}')
 
@@ -453,21 +453,14 @@ class TseitinFormula:
         # while returning, cut off the ending containing " or " caused by the last endline
         return " or ".join(subformulas_list)
 
-    # TODO: read data using with statement
-    # TODO: better reading method, now it reads only one line
-    # TODO: better exception handling
+    # TODO: validate formula
     def getFromulaFromTxt(self, filepath):
+        with open(filepath, 'r') as file:
+            line_list = []
+            for line in file:
+                line_list.append(f'{line.strip()} ')
 
-        txt_file = open(filepath, 'r')
-
-        formula = ""
-        for line in txt_file:
-            formula = line
-            break
-
-        txt_file.close()
-
-        return formula
+        return "".join(line_list)
 
     def getSolverReport(self):
         report = []
@@ -480,7 +473,7 @@ class TseitinFormula:
         total_terms_num = original_terms_num + tseitin_terms_num
 
         report = [
-            "Original formula:" + self.original_formula,
+            "Original formula:\n" + self.original_formula,
             "\n\nTseitin formula:\n" + tseitin_formula,
             "\n\nOriginal number of terms:\n" + str(original_terms_num),
             "\n\nTseitin number of terms:\n" + str(tseitin_terms_num),
