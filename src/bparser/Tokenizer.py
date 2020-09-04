@@ -1,4 +1,5 @@
-# TODO: some of expression needs parenthesis on the beginning and the end, there is need to add additional validation
+
+# TODO some of expression needs parenthesis on the beginning and the end, there is need to add additional validation
 class Tokenizer:
     def __init__(self, exp):
         # loogic formula

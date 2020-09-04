@@ -1,28 +1,20 @@
 from bparser.boolparser import BooleanParser
 from solver.SATSolver import SATSolver
 from utils import tseitin_conversions as tc
+from collections import deque, defaultdict
+from datetime import datetime
 import os
+import csv
+import re
 
 
 class TseitinFormula:
-    def __init__(self, formula, formula_format="string", convert_to_cnf=True,
-                 export_to_file=False, export_file_name="data"):
+    def __init__(self, formula, formula_format="string", export_to_cnf_file=False, debug=False, use_solver=True,
+                 solver_name='m22', return_all_assignments=False, use_timer=True, interrupt_time=None):
 
-        if formula_format == 'string':
-            self.original_formula = formula
-            self.tree = BooleanParser(formula)
-        elif formula_format == 'dnf_file':
-            self.original_formula = self.getFormulaFromDnf(formula)
-            self.tree = BooleanParser(self.original_formula)
-        elif formula_format == 'txt_file':
-            self.original_formula = self.getFromulaFromTxt(formula)
-            self.tree = BooleanParser(self.original_formula)
-        else:
-            raise RuntimeError(
-                "Unsupported formula format. You can use one of following options: string, dnf_file.")
-
-        self.tseitin_formula = ''
-        self.root = self.tree.root
+        self.inputFile = None
+        self.root = None
+        self.debug = debug
 
         # list of all clauses based on tree
         # every clause is a list, where:
@@ -30,7 +22,9 @@ class TseitinFormula:
         # id = 1: operator id
         # id = 2: second term or index of another clause
         self.clauses = []
+
         self.original_terms = []
+
         # list of all terms in expression
         self.terms = {}
 
@@ -41,105 +35,58 @@ class TseitinFormula:
         # keys: clause name, for example phi0
         # values: dict with keys 'first_term', 'second_term', 'operator', 'is_negated'
         self.clause_map = {}
-        self.is_valid = True
+
         self.terms_assignment = {}
-        self.execution_time_str = ''
+        self.execution_time_str = '--'
 
-        if convert_to_cnf:
-            self.toCNF()
+        # solver params
+        self.solver_name = solver_name
+        self.return_all_assignments = return_all_assignments
+        self.use_timer = use_timer
 
-            if export_to_file:
-                self.exportToFile(export_file_name)
+        if formula_format == 'string':
+            self.original_formula = formula
+        elif formula_format == 'file':
+            self.original_formula = self.getFormulaFromFile(
+                formula, debug=debug)
+            self.inputFile = formula
+        else:
+            raise RuntimeError(
+                "Unsupported formula format. You can use one of following options: string, file.")
+
+        # parse tree
+        if self.debug:
+            print("Parsing formula...")
+        self.tree = BooleanParser(self.original_formula)
+        self.root = self.tree.root
+        if self.debug:
+            print("Parsing complete!\n")
+
+        self.toCNF()
+
+        if use_solver:
+            self.solve(solver_name=self.solver_name, return_all_assignments=self.return_all_assignments,
+                       use_timer=self.use_timer, interrupt_time=interrupt_time)
+
+        if export_to_cnf_file:
+            if self.debug:
+                print("Export formula to CNF file...")
+            self.export2CNF()
+            if self.debug:
+                print("Successful data export!\n")
 
     def toCNF(self):
-        self.toTseitinClauses(None, self.root)
+        if self.debug:
+            print("Converting data to Tseitin formula...")
+
+        self.toTseitinClauses(self.root)
         self.getTseitinClauses()
         self.setTseitinFormula()
 
-    def toTseitinClauses(self, prev_node, node):
-        var_token = self.tree.tokenizer.getToken('var')
+        if self.debug:
+            print("Converting complete!\n")
 
-        if node.left != None and node.left.tokenType != var_token:
-            self.toTseitinClauses(node, node.left)
-
-        if node.right != None and node.right.tokenType != var_token:
-            self.toTseitinClauses(node, node.right)
-
-        # build clause
-        clause = []
-        if node == self.root:
-
-            clause = [
-                None, node.tokenType, None, node.negate
-            ]
-
-            var_token = self.tree.tokenizer.getToken('var')
-
-            # if left/right child of root is a term then last_clause_ids may be incomplete
-            if len(self.last_clause_ids) != 2:
-                # debug purposes only
-                # print("IDS: ", self.last_clause_ids,
-                #       node.left.tokenType, node.left.value, node.right.tokenType, node.right.value)
-
-                if node.left.negate == True or node.left.tokenType == var_token:
-                    # left child is a term
-                    if node.left.negate:
-                        self.clauses.append(
-                            self.getNegatedTermClause(node.left))
-                        clause[0] = len(self.clauses)-1
-                    else:
-                        clause[0] = node.left.value
-                else:
-                    # left child is an operator
-                    clause[0] = self.last_clause_ids[0]
-
-                if node.right.negate == True or node.right.tokenType == var_token:
-                    # right child is a term
-
-                    if node.right.negate:
-                        self.clauses.append(
-                            self.getNegatedTermClause(node.right))
-                        clause[2] = len(self.clauses)-1
-                    else:
-                        clause[2] = node.right.value
-                else:
-                    # right child is a operator
-                    clause[2] = self.last_clause_ids[0]
-
-            else:
-                # both leaves of root node are operators
-                clause[0] = self.last_clause_ids[0]
-                clause[2] = self.last_clause_ids[1]
-
-        else:
-            if node.left.value == None:
-                clause.append(len(self.clauses)-1)
-            else:
-                if node.left.negate:
-                    self.clauses.append(self.getNegatedTermClause(node.left))
-                    clause.append(len(self.clauses)-1)
-                else:
-                    clause.append(node.left.value)
-
-            clause.append(node.tokenType)
-
-            if node.right.value == None:
-                clause.append(len(self.clauses)-1)
-            else:
-                if node.right.negate:
-                    self.clauses.append(self.getNegatedTermClause(node.right))
-                    clause.append(len(self.clauses)-1)
-                else:
-                    clause.append(node.right.value)
-
-            clause.append(node.negate)
-
-        self.clauses.append(clause)
-
-        if prev_node == self.root:
-            self.last_clause_ids.append(len(self.clauses)-1)
-            
-    def toTseitinClausesWithStack(self, node):
+    def toTseitinClauses(self, node):
         var_token = self.tree.tokenizer.getToken('var')
         nodestack = deque()
         current = node
@@ -153,16 +100,15 @@ class TseitinFormula:
 
                 previous = current
                 current = current.left
-            
+
             (previous, current) = nodestack.pop()
 
             if current.right != None and current.right.tokenType != var_token and len(nodestack) > 0 and nodestack[-1][1] == current.right:
                 nodestack.pop()
-                nodestack.append((previous,current))
+                nodestack.append((previous, current))
                 previous = current
                 current = current.right
             else:
-                #########process current######################
                 # build clause
                 clause = []
 
@@ -173,7 +119,8 @@ class TseitinFormula:
                         if current.left.negate == True or current.left.tokenType == var_token:
                             # left child is a term
                             if current.left.negate:
-                                self.clauses.append(self.getNegatedTermClause(current.left))
+                                self.clauses.append(
+                                    self.getNegatedTermClause(current.left))
                                 clause[0] = len(self.clauses)-1
                             else:
                                 clause[0] = current.left.value
@@ -184,7 +131,8 @@ class TseitinFormula:
                         if current.right.negate == True or current.right.tokenType == var_token:
                             # right child is a term
                             if current.right.negate:
-                                self.clauses.append(self.getNegatedTermClause(current.right))
+                                self.clauses.append(
+                                    self.getNegatedTermClause(current.right))
                                 clause[2] = len(self.clauses)-1
                             else:
                                 clause[2] = current.right.value
@@ -200,7 +148,8 @@ class TseitinFormula:
                         clause.append(len(self.clauses)-1)
                     else:
                         if current.left.negate:
-                            self.clauses.append(self.getNegatedTermClause(current.left))
+                            self.clauses.append(
+                                self.getNegatedTermClause(current.left))
                             clause.append(len(self.clauses)-1)
                         else:
                             clause.append(current.left.value)
@@ -211,7 +160,8 @@ class TseitinFormula:
                         clause.append(len(self.clauses)-1)
                     else:
                         if current.right.negate:
-                            self.clauses.append(self.getNegatedTermClause(current.right))
+                            self.clauses.append(
+                                self.getNegatedTermClause(current.right))
                             clause.append(len(self.clauses)-1)
                         else:
                             clause.append(current.right.value)
@@ -222,7 +172,6 @@ class TseitinFormula:
                 if previous == self.root:
                     self.last_clause_ids.append(len(self.clauses)-1)
 
-                ############end process current####################
                 previous = current
                 current = None
 
@@ -301,10 +250,8 @@ class TseitinFormula:
         idx = 0
         for t in self.terms:
             self.terms[t] = idx
-            idx+=1
+            idx += 1
         self.clauses = clauses
-
-        self.tseitin_formula = self.getTseitinFormulaStr(split=False)
 
     def getTseitinFormulaStr(self, split=True):
         tseitin_formula = []
@@ -331,25 +278,30 @@ class TseitinFormula:
         return "".join(tseitin_formula)
 
     def toString(self):
-        return self.tseitin_formula
+        return self.getTseitinFormulaStr(split=False)
 
     # export Tseitin CNF form to .cnf file
-
-    def exportToFile(self, file_name):
-        clause_num = len(self.clauses)
-        term_num = len(self.terms)
+    def export2CNF(self):
+        clauses_num = len(self.clauses)
+        terms_num = len(self.terms)
 
         script_path = os.path.dirname(__file__)
+        os_sep = os.sep
         path_list = script_path.split(os.sep)
         script_directory = path_list[0:len(path_list)-1]
-        rel_path = "data/" + file_name + ".cnf"
-        path = "/".join(script_directory) + "/" + rel_path
-        with open(path, "w+") as f:
 
-            f.write("c  " + file_name + ".cnf\n")
-            f.write("c\n")
-            f.write("p cnf %d %d\n" % (term_num, clause_num))
+        file_name = f'{datetime.now().strftime("%d_%m_%Y_%H_%M_%S")}_data.cnf'
+        rel_path = f'data{os_sep}{file_name}'
+        path = f'{os_sep.join(script_directory)}{os_sep}{rel_path}'
 
+        with open(path, "w+") as file:
+            file.write(f'c {file_name}\n')
+            if self.inputFile:
+                file.write(f'c formula input file: {self.inputFile}\n')
+            file.write("c\n")
+            file.write(f'p cnf {terms_num} {clauses_num}')
+
+            clauses = []
             for clause in self.clauses:
                 formatted_clause_list = []
                 for idx, term in enumerate(clause):
@@ -363,17 +315,23 @@ class TseitinFormula:
                     formatted_clause_list.append(term_id)
 
                 formatted_clause_list.append(0)
-                clause_str = ' '.join(map(str, formatted_clause_list))
-                clause_str += '\n'
+                clauses.append(" ".join([str(i)
+                                         for i in formatted_clause_list]))
 
-                f.write(clause_str)
+            file.write('\n'.join(map(str, clauses)))
 
-    def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True):
+    def solve(self, solver_name='m22', return_all_assignments=True, use_timer=True, interrupt_time=None):
+        if self.debug:
+            print("Solving in progress...")
+
         solver_data = SATSolver(
-            self.terms, self.clauses).solve(solver_name, return_all_assignments, use_timer)
+            self.terms, self.clauses).solve(solver_name, return_all_assignments, use_timer, interrupt_time=interrupt_time)
 
         self.execution_time_str = solver_data['execution_time']
         self.terms_assignment = solver_data['terms_assignment']
+
+        if self.debug:
+            print("Solver is done!\n")
 
     def getTermAssignment(self, only_original=True):
         terms_assignment = []
@@ -390,23 +348,58 @@ class TseitinFormula:
 
         return terms_assignment
 
-    # TODO: better file exception handling
-    def getFormulaFromDnf(self, filepath):
-        with open(filepath, 'r') as dnf_file:
+    def getTermsAssignment(self, only_original=True):
+        if only_original:
+            terms_assignment = list()
+            p = re.compile('phi*')
+            for assignment in self.terms_assignment:
+                part_assignment = dict()
+                for term, value in assignment.items():
+                    if not p.match(term):
+                        part_assignment[term] = value
+
+                terms_assignment.append(part_assignment)
+            return terms_assignment
+        else:
+            return self.terms_assignment
+
+    def getFormulaFromFile(self, filepath, debug=True):
+        _, file = os.path.split(filepath)
+        extension = file.split(".")[-1]
+
+        if extension not in ["txt", "cnf", "dnf"]:
+            raise RuntimeError(
+                f'Not supported file extension: \'{extension}\'...')
+
+        if debug:
+            print(f'Loading data from file: \'{file}\'...')
+
+        if extension == "txt":
+            formula = self.getFromulaFromTxt(filepath)
+        elif extension in ["cnf", "dnf"]:
+            formula = self.getFormulaFromDIMAC(filepath)
+
+        if debug:
+            print("The data has been loaded!\n")
+
+        return formula
+
+    def getFormulaFromDIMAC(self, filepath):
+        with open(filepath, 'r') as file:
             initial_lines = True
             subformulas_list = []
-            for line in dnf_file:
+            for line in file:
                 subformula = ""
                 if initial_lines:
                     # skip comment lines
                     if line[0] == 'c':
                         continue
-                    # check if file is truly a dnf file inside and switch flag to formula processing
-                    elif line[0] == 'p' and line[2:5] == "dnf":
+                    # check if file is truly a dnf or cnf file inside and switch flag to formula processing
+                    elif line[0] == 'p' and line[2:5] in ["cnf", "dnf"]:
                         initial_lines = False
                     else:
                         raise RuntimeError(
-                            "Intial file lines do not follow DNF syntax.")
+                            "Intial file lines do not follow DNF or CNF syntax.")
                 else:
                     # variable used to concatenate digits of variable numbers higher than 9
                     variable_number = ""
@@ -429,7 +422,8 @@ class TseitinFormula:
                         if variable_number != "" and not character.isdigit():
                             # it should be whitespace, if so, add a variable called userdefX, where X is concatenated number, to the formula
                             if character != ' ':
-                                raise RuntimeError("Syntax error in clause line.")
+                                raise RuntimeError(
+                                    "Syntax error in clause line.")
                             subformula = subformula + " userdef" + variable_number + " "
                             variable_number = ""
 
@@ -457,31 +451,72 @@ class TseitinFormula:
         # while returning, cut off the ending containing " or " caused by the last endline
         return " or ".join(subformulas_list)
 
-    # TODO: better file exception handling
+    # TODO: validate formula
     def getFromulaFromTxt(self, filepath):
-        txt_file = open(filepath, 'r')
+        with open(filepath, 'r') as file:
+            line_list = []
+            for line in file:
+                line_list.append(f'{line.strip()} ')
 
-        formula = ""
-        for line in txt_file:
-            formula = line
-            break
-
-        txt_file.close()
-
-        return formula
+        return "".join(line_list)
 
     def getSolverReport(self):
+        report = []
+
         original_terms = list(set(self.original_terms))
         original_terms = [x for x in original_terms if x != None]
+        tseitin_formula = self.getTseitinFormulaStr(split=False)
+        original_terms_num = len(original_terms)
+        tseitin_terms_num = len(self.terms)
+        total_terms_num = original_terms_num + tseitin_terms_num
 
-        report_str = "Original formula:\n" + self.original_formula + \
-            "\n\nTseitin formula:\n" + self.tseitin_formula + \
-            "\n\nOriginal number of terms:\n" + str(len(original_terms)) + \
-            "\n\nTseitin number of terms:\n" + str(len(self.terms)) + \
-            "\n\nExecution time:\n" + self.execution_time_str + \
+        report = [
+            "Original formula:\n" + self.original_formula,
+            "\n\nTseitin formula:\n" + tseitin_formula,
+            "\n\nOriginal number of terms:\n" + str(original_terms_num),
+            "\n\nTseitin number of terms:\n" + str(tseitin_terms_num),
+            "\n\nTotal number of terms:\n" + str(total_terms_num),
+            "\n\nTotal number of clauses:\n" + str(len(self.clauses)),
+            "\n\nExecution time:\n" + self.execution_time_str,
             "\n\nTerms assignment:\n"
+        ]
 
-        for terms_assignment in self.getTermAssignment():
-            report_str += str(terms_assignment) + "\n"
+        for terms_assignment in self.getTermsAssignment():
+            report.append(str(terms_assignment) + "\n")
 
-        return report_str
+        return "".join(report)
+
+    def exportReport2CSV(self):
+        if self.debug:
+            print("Saving report to CSV file...")
+
+        original_terms = list(set(self.original_terms))
+        original_terms = [x for x in original_terms if x != None]
+        original_terms_num = len(original_terms)
+        tseitin_terms_num = len(self.terms)
+        total_terms_num = original_terms_num + tseitin_terms_num
+
+        report_summary = [
+            ["File name", self.inputFile if None else "--"],
+            ["Original number of terms", original_terms_num],
+            ["Tseitin number of terms", tseitin_terms_num],
+            ["Total number of terms", total_terms_num],
+            ["Total number of clauses", len(self.clauses)],
+            ["Execution time", self.execution_time_str],
+            ["Terms assignment"]
+        ]
+
+        report_data = defaultdict(list)
+        for terms_assignment in self.getTermsAssignment():
+            for term, value in terms_assignment.items():
+                report_data[term].append(value)
+
+        with open('src/data/report.csv', 'w') as file:
+            writer = csv.writer(file)
+            writer.writerows(report_summary)
+
+            for term, values in report_data.items():
+                writer.writerow([term] + values)
+
+        if self.debug:
+            print("Report was saved successfully!\n")
