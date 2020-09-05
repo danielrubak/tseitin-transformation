@@ -333,21 +333,6 @@ class TseitinFormula:
         if self.debug:
             print("Solver is done!\n")
 
-    def getTermAssignment(self, only_original=True):
-        terms_assignment = []
-
-        for assignment in self.terms_assignment:
-            part_assignment = {}
-
-            for term, term_value in assignment.items():
-                if only_original and term in self.original_terms:
-                    part_assignment[term] = term_value
-                elif only_original is False:
-                    part_assignment[term] = term_value
-            terms_assignment.append(part_assignment)
-
-        return terms_assignment
-
     def getTermsAssignment(self, only_original=True):
         if only_original:
             terms_assignment = list()
