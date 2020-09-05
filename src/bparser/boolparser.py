@@ -6,10 +6,6 @@ Grammar:
 AndTerm --> Condition { AND Condition}+
 Condition --> {!}Terminal [!=,==] {!}Terminal | {!}Terminal | {!}(Expression)
 Terminal --> Number or Variable
-Usage:
-from boolparser import *
-p = BooleanParser('<expression text>')
-p.evaluate(variable_dict) # variable_dict is a dictionary providing values for variables that appear in <expression text>
 """
 
 
@@ -135,21 +131,6 @@ class BooleanParser:
         else:
             raise Exception('NUM or VAR expected, but got ' +
                             self.tokenizer.next())
-
-    def evaluate(self, variable_dict):
-        return self.evaluateRecursive(self.root, variable_dict)
-
-    def evaluateRecursive(self, treeNode, variable_dict):
-        result = None
-        if treeNode.tokenType == self.tokenizer.getToken('val'):
-            result = treeNode.value
-        elif treeNode.tokenType == self.tokenizer.getToken('var'):
-            result = variable_dict.get(treeNode.value)
-
-        if result != None:
-            if treeNode.negate == True:
-                return not result
-            return result
 
         left = self.evaluateRecursive(treeNode.left, variable_dict)
         right = self.evaluateRecursive(treeNode.right, variable_dict)
